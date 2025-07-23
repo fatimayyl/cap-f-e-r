@@ -28,36 +28,45 @@ class FacialEmotionRecognition(Capsule):
         return {}
 
     def detect_faces_opencv(self, image):
-        """OpenCV ile yüz tespiti yap"""
-        # Gri tona çevir
-        if len(image.shape) == 3:
-            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        else:
-            gray = image
+    """OpenCV ile yüz tespiti yap"""
+    # Görüntü None mı?
+    if image is None:
+        raise ValueError("Görüntü boş geldi (None).")
 
-        # Yüzleri tespit et
-        faces = self.face_cascade.detectMultiScale(
-            gray,
-            scaleFactor=1.1,
-            minNeighbors=5,
-            minSize=(30, 30)
-        )
+    # RGB ise griye çevir
+    if len(image.shape) == 3:
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    else:
+        gray = image
 
-        # Detection formatına çevir
-        detections = []
-        for (x, y, w, h) in faces:
-            detection = {
-                "boundingBox": {
-                    "left": int(x),
-                    "top": int(y),
-                    "width": int(w),
-                    "height": int(h)
-                },
-                "confidence": 0.9  # OpenCV için sabit confidence
-            }
-            detections.append(detection)
+    # Görüntü dtype kontrolü
+    if gray.dtype != 'uint8':
+        gray = gray.astype('uint8')
 
-        return detections
+    # scaleFactor kesinlikle > 1 olmalı
+    faces = self.face_cascade.detectMultiScale(
+        gray,
+        scaleFactor=1.1,
+        minNeighbors=5,
+        minSize=(30, 30)
+    )
+
+    # Detection formatına çevir
+    detections = []
+    for (x, y, w, h) in faces:
+        detection = {
+            "boundingBox": {
+                "left": int(x),
+                "top": int(y),
+                "width": int(w),
+                "height": int(h)
+            },
+            "confidence": 0.9
+        }
+        detections.append(detection)
+
+    return detections
+
 
     def filter_bbox_face(self, face_detect):
         if len(face_detect) == 0:
