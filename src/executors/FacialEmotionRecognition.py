@@ -28,45 +28,45 @@ class FacialEmotionRecognition(Capsule):
         return {}
 
     def detect_faces_opencv(self, image):
-    """OpenCV ile yüz tespiti yap"""
-    # Görüntü None mı?
-    if image is None:
-        raise ValueError("Görüntü boş geldi (None).")
+        """OpenCV ile yüz tespiti yap"""
 
-    # RGB ise griye çevir
-    if len(image.shape) == 3:
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    else:
-        gray = image
+        # None kontrolü
+        if image is None:
+            raise ValueError("Görüntü boş (None) geldi.")
 
-    # Görüntü dtype kontrolü
-    if gray.dtype != 'uint8':
-        gray = gray.astype('uint8')
+        # Gri tona çevir
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        else:
+            gray = image
 
-    # scaleFactor kesinlikle > 1 olmalı
-    faces = self.face_cascade.detectMultiScale(
-        gray,
-        scaleFactor=1.1,
-        minNeighbors=5,
-        minSize=(30, 30)
-    )
+        # dtype kontrolü
+        if gray.dtype != 'uint8':
+            gray = gray.astype('uint8')
 
-    # Detection formatına çevir
-    detections = []
-    for (x, y, w, h) in faces:
-        detection = {
-            "boundingBox": {
-                "left": int(x),
-                "top": int(y),
-                "width": int(w),
-                "height": int(h)
-            },
-            "confidence": 0.9
-        }
-        detections.append(detection)
+        # Yüzleri tespit et
+        faces = self.face_cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(30, 30)
+        )
 
-    return detections
+        # Detection formatına çevir
+        detections = []
+        for (x, y, w, h) in faces:
+            detection = {
+                "boundingBox": {
+                    "left": int(x),
+                    "top": int(y),
+                    "width": int(w),
+                    "height": int(h)
+                },
+                "confidence": 0.9  # OpenCV için sabit confidence
+            }
+            detections.append(detection)
 
+        return detections
 
     def filter_bbox_face(self, face_detect):
         if len(face_detect) == 0:
@@ -105,7 +105,7 @@ class FacialEmotionRecognition(Capsule):
         roi_gray = np.array(roi_gray, dtype=np.float32) / 255.0
         roi_gray = np.expand_dims(roi_gray, axis=0)
 
-        # Model prediction (bu kısmı şimdilik comment yapıyoruz, model yüklendikten sonra açılacak)
+        # Model prediction (model hazır olduğunda burası açılacak)
         # predicted_emotion = self.model.predict(roi_gray)
         # max_index = int(np.argmax(predicted_emotion))
         # emotion = emotion_labels[max_index]
@@ -135,7 +135,6 @@ class FacialEmotionRecognition(Capsule):
 
         if len(face_detections) == 0:
             print("  WARNING: No faces detected with OpenCV")
-            # Boş detection listesi ile devam et
             empty_detection = Detection(
                 boundingBox={"left": 0, "top": 0, "width": 0, "height": 0},
                 confidence=0.0,
@@ -146,7 +145,6 @@ class FacialEmotionRecognition(Capsule):
             self.prediction = [empty_detection]
         else:
             print(f"  Found {len(face_detections)} face(s) with OpenCV")
-            # Emotion recognition yap
             self.prediction = self.infer(self.image.value, face_detections, self.image.uID)
 
         self.image = Image.set_frame(img=self.image, package_uID=self.uID, redis_db=self.redis_db)
