@@ -146,9 +146,12 @@ class FacialEmotionRecognition(Capsule):
         else:
             print(f"  Found {len(face_detections)} face(s) with OpenCV")
             self.prediction = self.infer(self.image.value, face_detections, self.image.uID)
+            print("Prediction:", self.prediction)
 
         self.image = Image.set_frame(img=self.image, package_uID=self.uID, redis_db=self.redis_db)
         packageModel = build_response(context=self)
+        print("Build response output:", packageModel)
+
         return packageModel
 
 
