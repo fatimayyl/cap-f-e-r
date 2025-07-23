@@ -1,14 +1,14 @@
 
 from sdks.novavision.src.helper.package import PackageHelper
-from components.Package.src.models.PackageModel import PackageModel, PackageConfigs, ConfigExecutor, PackageOutputs, PackageResponse, PackageExecutor, OutputImage
-
+from capsules.FacialEmotionRecognition.src.models.PackageModel import FacialEmotionRecognitionExecutor, PackageModel, PackageConfigs, FacialEmotionRecognitionResponse, FacialEmotionRecognitionOutputs, OutputImage, ConfigExecutor, OutputDetections
 
 def build_response(context):
-    outputImage = OutputImage(value=context.image)
-    Outputs = PackageOutputs(outputImage=outputImage)
-    packageResponse = PackageResponse(outputs=Outputs)
-    packageExecutor = PackageExecutor(value=packageResponse)
-    executor = ConfigExecutor(value=packageExecutor)
+    emotionOutput = OutputImage(value=context.image)
+    emotionDetection = OutputDetections(value=context.prediction)
+    emotionOutputs = FacialEmotionRecognitionOutputs(outputDetections=emotionDetection, outputImage=emotionOutput)
+    emotionResponse = FacialEmotionRecognitionResponse(outputs=emotionOutputs)
+    emotionExecutor = FacialEmotionRecognitionExecutor(value=emotionResponse)
+    executor = ConfigExecutor(value=emotionExecutor)
     packageConfigs = PackageConfigs(executor=executor)
     package = PackageHelper(packageModel=PackageModel, packageConfigs=packageConfigs)
     packageModel = package.build_model(context)
