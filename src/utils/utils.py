@@ -55,7 +55,7 @@ def load_models():
     application = Application()
     device = select_device('0' if tf.config.list_physical_devices('GPU') else 'cpu')
     models["device"] = device
-    app_param_task = application.get_app_param("FacialEmotionRecognition", "ConfigExecutor")
+    app_param_task = application.get_param("FacialEmotionRecognition", "ConfigExecutor")
 
     for i in app_param_task:
         key = str(list(i.keys())[0])
