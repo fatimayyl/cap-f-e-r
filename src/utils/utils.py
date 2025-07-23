@@ -48,7 +48,7 @@ def select_device(device='', batch_size=0, newline=True):
     if not newline:
         s = s.rstrip()
     return arg
-
+"""
 def load_models():
     models = {}
     model = {}
@@ -78,3 +78,4 @@ def load_models():
                 models["ModelCPU"] = model
 
     return models
+"""
