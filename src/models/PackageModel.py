@@ -1,21 +1,15 @@
-
 from pydantic import Field, validator
 from typing import List, Optional, Union, Literal
-from sdks.novavision.src.base.model import Package, Image, Inputs, Configs, Outputs, Response, Request, Output, Input, Config
+from sdks.novavision.src.base.model import Package, Detection, Input, Output, Image, Config, Inputs, Configs, Outputs, Response, Request
+
+class ImageDetect(Image):
+    detections: Optional[List[Detection]] = None
 
 
 class InputImage(Input):
     name: Literal["inputImage"] = "inputImage"
-    value: Union[List[Image], Image]
+    value: Image
     type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get('value')
-        if isinstance(value, Image):
-            return "object"
-        elif isinstance(value, list):
-            return "list"
 
     class Config:
         title = "Image"
@@ -23,32 +17,18 @@ class InputImage(Input):
 
 class OutputImage(Output):
     name: Literal["outputImage"] = "outputImage"
-    value: Union[List[Image],Image]
+    value: Image
     type: str = "object"
-
-    @validator("type", pre=True, always=True)
-    def set_type_based_on_value(cls, value, values):
-        value = values.get('value')
-        if isinstance(value, Image):
-            return "object"
-        elif isinstance(value, list):
-            return "list"
 
     class Config:
         title = "Image"
 
 
-class KeepSideFalse(Config):
-    name: Literal["False"] = "False"
-    value: Literal[False] = False
-    type: Literal["bool"] = "bool"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "Disable"
+class FacialEmotionRecognitionInputs(Inputs):
+    inputImage: InputImage
 
 
-class KeepSideTrue(Config):
+class ConfigHalfTrue(Config):
     name: Literal["True"] = "True"
     value: Literal[True] = True
     type: Literal["bool"] = "bool"
@@ -58,49 +38,118 @@ class KeepSideTrue(Config):
         title = "Enable"
 
 
-class KeepSideBBox(Config):
+class ConfigHalfFalse(Config):
+    name: Literal["False"] = "False"
+    value: Literal[False] = False
+    type: Literal["bool"] = "bool"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "Disable"
+
+
+class ConfigDeviceGPU(Config):
+    name: Literal["ConfigDeviceGPU"] = "ConfigDeviceGPU"
+    value: Literal["GPU"] = "GPU"
+    type: Literal["string"] = "string"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "GPU"
+
+
+class ConfigDeviceCPU(Config):
+    name: Literal["ConfigDeviceCPU"] = "ConfigDeviceCPU"
+    value: Literal["CPU"] = "CPU"
+    type: Literal["string"] = "string"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "CPU"
+
+
+class ConfigDevice(Config):
     """
-        Rotate image without catting off sides.
+        It refers to whether the model should run on a CPU or a GPU.
+        You can select the device type for inference or training process.
     """
-    name: Literal["KeepSide"] = "KeepSide"
-    value: Union[KeepSideTrue, KeepSideFalse]
+    name: Literal["ConfigDevice"] = "ConfigDevice"
+    value: Union[ConfigDeviceCPU, ConfigDeviceGPU]
+    type: Literal["object"] = "object"
+    field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
+
+    class Config:
+        title = "Device"
+
+
+class ConfigDrawBBoxTrue(Config):
+    name: Literal["True"] = "True"
+    value: Literal[True] = True
+    type: Literal["bool"] = "bool"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "Enable"
+
+
+#parametre
+class ConfigReturnAllScoresTrue(Config):
+    name: Literal["configConvertToGrayTrue"] = "configConvertToGrayTrue"
+    value: Literal["True"] = "True"
+    type: Literal["string"] = "string"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "Yes"
+
+
+class ConfigReturnAllScoresFalse(Config):
+    name: Literal["configConvertToGrayFalse"] = "configConvertToGrayFalse"
+    value: Literal["False"] = "False"
+    type: Literal["string"] = "string"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "No"
+
+
+class ConfigReturnAllScores(Config):
+    name: Literal["returnAllScores"] = "returnAllScores"
+    value: Union[ConfigReturnAllScoresTrue, ConfigReturnAllScoresFalse]
     type: Literal["object"] = "object"
     field: Literal["dropdownlist"] = "dropdownlist"
 
     class Config:
-        title = "Keep Sides"
+        title = "Return All Scores"
 
 
-class Degree(Config):
-    """
-        Positive angles specify counterclockwise rotation while negative angles indicate clockwise rotation.
-    """
-    name: Literal["Degree"] = "Degree"
-    value: int = Field(ge=-359.0, le=359.0,default=0)
-    type: Literal["number"] = "number"
-    field: Literal["textInput"] = "textInput"
-    placeHolder: Literal["[-359, 359]"] = "[-359, 359]"
+
+
+class FacialEmotionRecognitionConfigs(Configs):
+    configDevice: ConfigDevice
+
+
+class Detection(Detection):
+    imgUID: str
+
+
+class OutputDetections(Output):
+    name: Literal["outputDetections"] = "outputDetections"
+    value: List[Detection]
+    type: Literal["list"] = "list"
 
     class Config:
-        title = "Angle"
+        title = "Detections"
 
 
-class PackageInputs(Inputs):
-    inputImage: InputImage
-
-
-class PackageConfigs(Configs):
-    degree: Degree
-    drawBBox: KeepSideBBox
-
-
-class PackageOutputs(Outputs):
+class FacialEmotionRecognitionOutputs(Outputs):
     outputImage: OutputImage
+    outputDetections: OutputDetections
 
 
-class PackageRequest(Request):
-    inputs: Optional[PackageInputs]
-    configs: PackageConfigs
+class FacialEmotionRecognitionRequest(Request):
+    inputs: Optional[FacialEmotionRecognitionInputs] = None
+    configs: FacialEmotionRecognitionConfigs
 
     class Config:
         json_schema_extra = {
@@ -108,18 +157,59 @@ class PackageRequest(Request):
         }
 
 
-class PackageResponse(Response):
-    outputs: PackageOutputs
+class FacialEmotionRecognitionResponse(Response):
+    outputs: FacialEmotionRecognitionOutputs
+
+#buraya kadar
+class FacialEmotionRecognitionDeepFaceInputs(Inputs):
+    inputImage: InputImage
 
 
-class PackageExecutor(Config):
-    name: Literal["Package"] = "Package"
-    value: Union[PackageRequest, PackageResponse]
+class FacialEmotionRecognitionDeepFaceConfigs(Configs):
+    configReturnAllScores: ConfigReturnAllScores
+
+
+class FacialEmotionRecognitionDeepFaceOutputs(Outputs):
+    outputImage: OutputImage
+    outputDetections: OutputDetections
+
+
+class FacialEmotionRecognitionDeepFaceRequest(Request):
+    inputs: Optional[FacialEmotionRecognitionDeepFaceInputs]
+    configs: FacialEmotionRecognitionDeepFaceConfigs
+
+    class Config:
+        json_schema_extra = {
+            "target": "configs"
+        }
+
+class FacialEmotionRecognitionDeepFaceResponse(Response):
+    outputs: FacialEmotionRecognitionDeepFaceOutputs
+
+
+class FacialEmotionRecognitionExecutor(Config):
+    name: Literal["FacialEmotionRecognition"] = "FacialEmotionRecognition"
+    value: Union[FacialEmotionRecognitionRequest, FacialEmotionRecognitionResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "Package"
+        title = "Facial Emotion Recognition"
+        json_schema_extra = {
+            "target": {
+                "value": 0
+            }
+        }
+
+
+class FacialEmotionRecognitionDeepFaceExecutor(Config):
+    name: Literal["FacialEmotionRecognitionDeepFace"] = "FacialEmotionRecognitionDeepFace"
+    value: Union[FacialEmotionRecognitionDeepFaceRequest, FacialEmotionRecognitionDeepFaceResponse]
+    type: Literal["object"] = "object"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "DeepFace"
         json_schema_extra = {
             "target": {
                 "value": 0
@@ -129,15 +219,12 @@ class PackageExecutor(Config):
 
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-    value: Union[PackageExecutor]
+    value: Union[FacialEmotionRecognitionExecutor,FacialEmotionRecognitionDeepFaceExecutor]
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
     class Config:
         title = "Task"
-        json_schema_extra = {
-            "target": "value"
-        }
 
 
 class PackageConfigs(Configs):
@@ -146,5 +233,5 @@ class PackageConfigs(Configs):
 
 class PackageModel(Package):
     configs: PackageConfigs
-    type: Literal["component"] = "component"
-    name: Literal["Package"] = "Package"
+    type: Literal["capsule"] = "capsule"
+    name: Literal["FacialEmotionRecognition"] = "FacialEmotionRecognition"
