@@ -8,7 +8,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.capsule import Capsule
 from sdks.novavision.src.helper.executor import Executor
-from capsules.FacialEmotionRecognition.src.utils.utils import load_models
+#from capsules.FacialEmotionRecognition.src.utils.utils import load_models
 from capsules.FacialEmotionRecognition.src.utils.response import build_response
 from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection
 
@@ -20,16 +20,23 @@ class FacialEmotionRecognition(Capsule):
         self.request.model = PackageModel(**(self.request.data))
         self.image = self.request.get_param("inputImage")
         self.device = self.request.get_param("ConfigDevice")
-        self.select_device = self.bootstrap["device"]
+        #self.select_device = self.bootstrap["device"]
+        """
         if self.device == "GPU" and "GPU" in self.select_device:
             self.model = self.bootstrap["ModelGPU"]["model"]
         else:
             self.model = self.bootstrap["ModelCPU"]["model"]
+    """
+    @staticmethod
+    def bootstrap(config: dict) -> dict:
+        return {}
 
+    """
     @staticmethod
     def bootstrap(config: dict) -> dict:
         model = load_models()
         return model
+    """
 
     def filter_bbox_face(self, face_detect):
         if len(face_detect) == 0:
