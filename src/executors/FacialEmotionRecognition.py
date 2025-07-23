@@ -1,42 +1,27 @@
-
 import os
 import sys
 import numpy as np
 from PIL import Image as PILImage
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 
 from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.capsule import Capsule
 from sdks.novavision.src.helper.executor import Executor
-#from capsules.FacialEmotionRecognition.src.utils.utils import load_models
 from capsules.FacialEmotionRecognition.src.utils.response import build_response
 from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection
 
 
-
 class FacialEmotionRecognition(Capsule):
     def __init__(self, request, bootstrap):
-        super().__init__(request,bootstrap)
+        super().__init__(request, bootstrap)
         self.request.model = PackageModel(**(self.request.data))
         self.image = self.request.get_param("inputImage")
         self.device = self.request.get_param("ConfigDevice")
-        #self.select_device = self.bootstrap["device"]
-        """
-        if self.device == "GPU" and "GPU" in self.select_device:
-            self.model = self.bootstrap["ModelGPU"]["model"]
-        else:
-            self.model = self.bootstrap["ModelCPU"]["model"]
-    """
+
     @staticmethod
     def bootstrap(config: dict) -> dict:
         return {}
-
-    """
-    @staticmethod
-    def bootstrap(config: dict) -> dict:
-        model = load_models()
-        return model
-    """
 
     def filter_bbox_face(self, face_detect):
         if len(face_detect) == 0:
@@ -87,7 +72,25 @@ class FacialEmotionRecognition(Capsule):
     def run(self):
         self.prediction = []
         self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
-        self.prediction = self.infer(self.image.value, self.image.detections, self.image.uID)
+
+        #  YENİ: Detections kontrolü ekle
+        if not hasattr(self.image, 'detections') or self.image.detections is None or len(self.image.detections) == 0:
+            # Hata durumunda boş liste döndür ve uyarı ver
+            print("  WARNING: No face detections found. Please run Face Detection first.")
+            self.prediction = []
+            # Boş detection listesi ile devam et
+            empty_detection = Detection(
+                boundingBox={"left": 0, "top": 0, "width": 0, "height": 0},
+                confidence=0.0,
+                classLabel="No Face Detected",
+                classId=-1,
+                imgUID=self.image.uID if hasattr(self.image, 'uID') else "unknown"
+            )
+            self.prediction = [empty_detection]
+        else:
+            # Normal akış
+            self.prediction = self.infer(self.image.value, self.image.detections, self.image.uID)
+
         self.image = Image.set_frame(img=self.image, package_uID=self.uID, redis_db=self.redis_db)
         packageModel = build_response(context=self)
         return packageModel
