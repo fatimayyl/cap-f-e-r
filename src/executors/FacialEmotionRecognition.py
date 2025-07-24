@@ -10,7 +10,7 @@ from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.capsule import Capsule
 from sdks.novavision.src.helper.executor import Executor
 from capsules.FacialEmotionRecognition.src.utils.response import build_response
-from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection
+from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection, BoundingBox
 
 
 class FacialEmotionRecognition(Capsule):
@@ -30,21 +30,17 @@ class FacialEmotionRecognition(Capsule):
     def detect_faces_opencv(self, image):
         """OpenCV ile yüz tespiti yap"""
 
-        # None kontrolü
         if image is None:
             raise ValueError("Görüntü boş (None) geldi.")
 
-        # Gri tona çevir
         if len(image.shape) == 3:
             gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
         else:
             gray = image
 
-        # dtype kontrolü
         if gray.dtype != 'uint8':
             gray = gray.astype('uint8')
 
-        # Yüzleri tespit et
         faces = self.face_cascade.detectMultiScale(
             gray,
             scaleFactor=1.1,
@@ -52,7 +48,6 @@ class FacialEmotionRecognition(Capsule):
             minSize=(30, 30)
         )
 
-        # Detection formatına çevir
         detections = []
         for (x, y, w, h) in faces:
             detection = {
@@ -62,62 +57,56 @@ class FacialEmotionRecognition(Capsule):
                     "width": int(w),
                     "height": int(h)
                 },
-                "confidence": 0.9  # OpenCV için sabit confidence
+                "confidence": 0.9
             }
             detections.append(detection)
 
         return detections
 
-    def filter_bbox_face(self, face_detect):
+    def filter_bbox_face(self, face_detect) -> BoundingBox | str:
         if len(face_detect) == 0:
             return "Face information not found"
         if len(face_detect) > 1:
             return "Multiple face information found"
-        if len(face_detect) == 1:
-            return face_detect[0]["boundingBox"]
+        return BoundingBox(**face_detect[0]["boundingBox"])
 
-    def select_face_from_image(self, image, bbox):
-        left = int(bbox["left"])
-        top = int(bbox["top"])
-        width = int(bbox["width"])
-        height = int(bbox["height"])
-        face_image = image[top:top + height, left:left + width]
-        return face_image
+    def select_face_from_image(self, image, bbox: BoundingBox):
+        left = int(bbox.left)
+        top = int(bbox.top)
+        width = int(bbox.width)
+        height = int(bbox.height)
+        return image[top:top + height, left:left + width]
 
     def infer(self, image, detection, img_uid):
         detection_list = []
         emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
-        face_img = self.filter_bbox_face(detection)
 
-        if type(face_img) == str:
-            return face_img
+        face_bbox = self.filter_bbox_face(detection)
 
-        select_face = self.select_face_from_image(image, face_img)
-        select_face_pil = PILImage.fromarray(select_face.astype(np.uint8))
-        gray = select_face_pil.convert("L")
+        if isinstance(face_bbox, str):
+            return face_bbox
 
-        img = gray.resize((64, 64))
+        select_face = self.select_face_from_image(image, face_bbox)
+        select_face_pil = PILImage.fromarray(select_face.astype(np.uint8)).convert("L")
+
+        img = select_face_pil.resize((64, 64))
         img = np.array(img, dtype=np.float32) / 255.0
         img = np.expand_dims(img, axis=-1)
         img = np.expand_dims(img, axis=0)
-        bbox = detection[0]["boundingBox"]
-        roi_gray = gray.resize((48, 48))
-        roi_gray = np.array(roi_gray, dtype=np.float32) / 255.0
-        roi_gray = np.expand_dims(roi_gray, axis=0)
 
-        # Model prediction (model hazır olduğunda burası açılacak)
-        # predicted_emotion = self.model.predict(roi_gray)
+        # Model prediction (aktif değil)
+        # predicted_emotion = self.model.predict(...)
         # max_index = int(np.argmax(predicted_emotion))
         # emotion = emotion_labels[max_index]
         # confidence = predicted_emotion[0][max_index]
 
-        # Test için sabit değerler (model yüklenene kadar)
+        # Dummy sonuç
         max_index = 3  # Happy
         emotion = emotion_labels[max_index]
         confidence = 0.85
 
         detect = Detection(
-            boundingBox=bbox,
+            boundingBox=face_bbox,
             confidence=float(confidence),
             classLabel=emotion,
             classId=max_index,
@@ -130,13 +119,12 @@ class FacialEmotionRecognition(Capsule):
         self.prediction = []
         self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
 
-        # Önce OpenCV ile yüz tespiti yap
         face_detections = self.detect_faces_opencv(self.image.value)
 
         if len(face_detections) == 0:
             print("  WARNING: No faces detected with OpenCV")
             empty_detection = Detection(
-                boundingBox={"left": 0, "top": 0, "width": 0, "height": 0},
+                boundingBox=BoundingBox(left=0, top=0, width=0, height=0),
                 confidence=0.0,
                 classLabel="No Face Detected",
                 classId=-1,
@@ -147,16 +135,16 @@ class FacialEmotionRecognition(Capsule):
             print(f"  Found {len(face_detections)} face(s) with OpenCV")
             self.prediction = self.infer(self.image.value, face_detections, self.image.uID)
             print("Prediction:", self.prediction)
-            # Kutulu görseli çiz
+
+            # Görsel üzerine kutu çiz
             for det in self.prediction:
                 bbox = det.boundingBox
-                left, top = int(bbox["left"]), int(bbox["top"])
-                right = left + int(bbox["width"])
-                bottom = top + int(bbox["height"])
+                left, top = int(bbox.left), int(bbox.top)
+                right = left + int(bbox.width)
+                bottom = top + int(bbox.height)
                 cv2.rectangle(self.image.value, (left, top), (right, bottom), (0, 255, 0), 2)
 
-            # Görseli encode et ve Redis'e yaz
-            self.image.encode_image()  # image.value -> image.bytes olacak
+            self.image.encode_image()
 
         self.image = Image.set_frame(img=self.image, package_uID=self.uID, redis_db=self.redis_db)
         packageModel = build_response(context=self)
@@ -165,5 +153,5 @@ class FacialEmotionRecognition(Capsule):
         return packageModel
 
 
-if "__main__" == __name__:
+if __name__ == "__main__":
     Executor(sys.argv[1]).run()
