@@ -147,6 +147,16 @@ class FacialEmotionRecognition(Capsule):
             print(f"  Found {len(face_detections)} face(s) with OpenCV")
             self.prediction = self.infer(self.image.value, face_detections, self.image.uID)
             print("Prediction:", self.prediction)
+            # Kutulu görseli çiz
+            for det in self.prediction:
+                bbox = det.boundingBox
+                left, top = int(bbox["left"]), int(bbox["top"])
+                right = left + int(bbox["width"])
+                bottom = top + int(bbox["height"])
+                cv2.rectangle(self.image.value, (left, top), (right, bottom), (0, 255, 0), 2)
+
+            # Görseli encode et ve Redis'e yaz
+            self.image.encode_image()  # image.value -> image.bytes olacak
 
         self.image = Image.set_frame(img=self.image, package_uID=self.uID, redis_db=self.redis_db)
         packageModel = build_response(context=self)
