@@ -2,6 +2,15 @@ from pydantic import Field, validator
 from typing import List, Optional, Union, Literal
 from sdks.novavision.src.base.model import Package, Detection, Input, Output, Image, Config, Inputs, Configs, Outputs, Response, Request
 
+from pydantic import BaseModel
+
+class BoundingBox(BaseModel):
+    left: float
+    top: float
+    width: float
+    height: float
+
+
 class ImageDetect(Image):
     detections: Optional[List[Detection]] = None
 
@@ -130,6 +139,7 @@ class FacialEmotionRecognitionConfigs(Configs):
 
 
 class Detection(Detection):
+    boundingBox: BoundingBox
     imgUID: str
 
 
