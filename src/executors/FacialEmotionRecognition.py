@@ -144,7 +144,9 @@ class FacialEmotionRecognition(Capsule):
                 bottom = top + int(bbox.height)
                 cv2.rectangle(self.image.value, (left, top), (right, bottom), (0, 255, 0), 2)
 
-            self.image.encode_image()
+            success, encoded_img = cv2.imencode('.jpg', self.image.value)
+            if success:
+                self.image.bytes = encoded_img.tobytes()
 
         self.image = Image.set_frame(img=self.image, package_uID=self.uID, redis_db=self.redis_db)
         packageModel = build_response(context=self)
