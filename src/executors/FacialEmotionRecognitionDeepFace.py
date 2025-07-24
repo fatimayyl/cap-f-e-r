@@ -28,28 +28,30 @@ class FacialEmotionRecognitionDeepFace(Capsule):
         detection_list = []
         self.image.value = np.asarray(self.image.value).astype(np.uint8)
 
-        if len(self.image.detections) == 0:
-            return "Face information not found"
-        if len(self.image.detections) > 1:
-            return "Multiple face information found"
-
-        bbox = self.image.detections[0]["boundingBox"]
-
-        x, y, w, h = int(bbox["left"]), int(bbox["top"]), int(bbox["width"]), int(bbox["height"])
-        face_crop = self.image.value[y:y+h, x:x+w]
-
+        # DeepFace ile tespit yapılır (detector_backend opencv)
         try:
-            pil_image = PILImage.fromarray(face_crop.astype(np.uint8))
-            result = DeepFace.analyze(
-                img_path=np.array(pil_image),
+            results = DeepFace.analyze(
+                img_path=self.image.value,
                 actions=["emotion"],
-                enforce_detection=False,
+                enforce_detection=True,
                 detector_backend="opencv"
-            )[0]
+            )
+        except Exception as e:
+            return f"DeepFace error: {str(e)}"
 
+        # Multi-face destekliyoruz ama her biri için Detection nesnesi oluşturulmalı
+        for result in results:
+            region = result.get("region", {})
             emotion = result["dominant_emotion"]
             confidence = result["emotion"][emotion]
             class_id = list(result["emotion"].keys()).index(emotion)
+
+            bbox = {
+                "left": region["x"],
+                "top": region["y"],
+                "width": region["w"],
+                "height": region["h"]
+            }
 
             detection = Detection(
                 boundingBox=bbox,
@@ -64,14 +66,19 @@ class FacialEmotionRecognitionDeepFace(Capsule):
 
             detection_list.append(detection)
 
-        except Exception as e:
-            return f"DeepFace error: {str(e)}"
-
         return detection_list
 
     def run(self):
+        # Redis’ten img yükle
         self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
-        self.detections = self.deepface_inference()
+
+        # Yüz tespiti + duygular
+        detection_list = self.deepface_inference()
+
+        # 📌 En önemli satır: image.detections'a yaz!
+        self.image.detections = detection_list
+
+        # response’a bağla
         packageModel = build_response_deepface(context=self)
         return packageModel
 
