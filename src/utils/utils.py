@@ -50,15 +50,16 @@ def select_device(device='', batch_size=0, newline=True):
     return arg
 
 
-def load_models():
+def load_models(config):
     models = {}
     application = Application()
     device = select_device('0' if tf.config.list_physical_devices('GPU') else 'cpu')
     models["device"] = device
-    app_param_task = application.get_param("FacialEmotionRecognition", "ConfigExecutor")
-    print("DEBUG: app_param_task =", app_param_task)
+    print(config)
+    config_device= application.get_param(config=config,name="ConfigDevice")
+    print("DEBUG: app_param_task =", config_device)
 
-    if not app_param_task:
+    if not config_device:
         print("Warning: ConfigExecutor param is None or empty, using default CPU device.")
 
         # Model dosyası yoksa indir
@@ -80,26 +81,55 @@ def load_models():
 
         return models
 
-    for i in app_param_task:
-        key = list(i.keys())[0]
-        config_device = i[key]['configs']['configDevice']['value']['value']
 
-        if not os.path.exists(weight_path):
-            if Download.download_from_drive(weight_url, weight_path) is not None:
-                print("modelFER.h5 model download successfully.")
-            else:
-                print("modelFER.h5 model download failed.")
 
-        model = tf.keras.models.load_model(weight_path)
 
-        if config_device == 'GPU' and 'GPU' in device:
-            with tf.device(device):
-                models["ModelGPU"] = {"model": model}
+
+    if not os.path.exists(weight_path):
+        if Download.download_from_drive(weight_url, weight_path) is not None:
+            print("modelFER.h5 model download successfully.")
         else:
-            with tf.device(device):
-                models["ModelCPU"] = {"model": model}
+            print("modelFER.h5 model download failed.")
+
+    model = tf.keras.models.load_model(weight_path)
+
+    if config_device == 'GPU' and 'GPU' in device:
+        with tf.device(device):
+            models["ModelGPU"] = {"model": model}
+    else:
+        with tf.device(device):
+            models["ModelCPU"] = {"model": model}
+
 
     return models
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
