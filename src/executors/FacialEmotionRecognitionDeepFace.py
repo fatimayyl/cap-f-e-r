@@ -2,14 +2,21 @@ import os
 import sys
 import numpy as np
 from PIL import Image as PILImage
-from deepface import DeepFace
+
+
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
+"""
+deepface_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../deepface'))
+sys.path.append(deepface_path)
+"""
+from deepface import DeepFace
+
 
 from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.capsule import Capsule
 from sdks.novavision.src.helper.executor import Executor
-from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection, ReturnAllScores
+from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection #,ReturnAllScores
 from capsules.FacialEmotionRecognition.src.utils.response import build_response_deepface
 
 
@@ -37,7 +44,8 @@ class FacialEmotionRecognitionDeepFace(Capsule):
                 detector_backend="opencv"
             )
         except Exception as e:
-            return f"DeepFace error: {str(e)}"
+            print(f"[❌ DeepFace error] {e}")
+            return []
 
         # Multi-face destekliyoruz ama her biri için Detection nesnesi oluşturulmalı
         for result in results:
