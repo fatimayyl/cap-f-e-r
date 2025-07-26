@@ -18,19 +18,12 @@ class FacialEmotionRecognition(Capsule):
         super().__init__(request, bootstrap)
         self.request.model = PackageModel(**(self.request.data))
         self.image = self.request.get_param("inputImage")
-        self.device = self.request.get_param("ConfigDevice")
-        self.select_device = self.bootstrap["device"]
-        if self.device == "GPU" and "GPU" in self.select_device:
-            self.model = self.bootstrap.get("ModelGPU", {}).get("model", None)
-        else:
-            self.model = self.bootstrap.get("ModelCPU", {}).get("model", None)
-
-        if self.model is None:
-            raise RuntimeError("No valid model found for the selected device.")
+        self.device = self.bootstrap.get("ConfigDevice")
+        print("self.device:", self.device)
 
     @staticmethod
     def bootstrap(config: dict) -> dict:
-        return load_models()
+        return load_models(config=config)
 
     def filter_bbox_face(self, face_detect):
         if len(face_detect) == 0:
