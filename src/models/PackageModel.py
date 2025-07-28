@@ -103,7 +103,7 @@ class ConfigDrawBBoxTrue(Config):
 
 #parametre
 class ConfigReturnAllScoresTrue(Config):
-    name: Literal["configReturnAllScoresTrue"] = "configReturnAllScoresTrue"
+    name: Literal["configConvertToGrayTrue"] = "configConvertToGrayTrue"
     value: Literal["True"] = "True"
     type: Literal["string"] = "string"
     field: Literal["option"] = "option"
@@ -113,7 +113,7 @@ class ConfigReturnAllScoresTrue(Config):
 
 
 class ConfigReturnAllScoresFalse(Config):
-    name: Literal["configReturnAllScoresFalse"] = "configReturnAllScoresFalse"
+    name: Literal["configConvertToGrayFalse"] = "configConvertToGrayFalse"
     value: Literal["False"] = "False"
     type: Literal["string"] = "string"
     field: Literal["option"] = "option"
