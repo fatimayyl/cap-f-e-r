@@ -48,88 +48,34 @@ def select_device(device='', batch_size=0, newline=True):
     if not newline:
         s = s.rstrip()
     return arg
-
-
-def load_models(config):
+"""
+def load_models():
     models = {}
+    model = {}
     application = Application()
     device = select_device('0' if tf.config.list_physical_devices('GPU') else 'cpu')
     models["device"] = device
-    print(config)
-    config_device= application.get_param(config=config,name="ConfigDevice")
-    print("DEBUG: app_param_task =", config_device)
+    app_param_task = application.get_param("FacialEmotionRecognition", "ConfigExecutor")
 
-    if not config_device:
-        print("Warning: ConfigExecutor param is None or empty, using default CPU device.")
+    for i in app_param_task:
+        key = str(list(i.keys())[0])
+        config_device = i[key]['configs']['configDevice']['value']['value']
 
-        # Model dosyası yoksa indir
         if not os.path.exists(weight_path):
-            print("Model file not found, attempting to download...")
             if Download.download_from_drive(weight_url, weight_path) is not None:
-                print("✅ modelFER.h5 model downloaded successfully.")
+                print(f"{'modelFER.h5'} model download successfully.")
+
             else:
-                raise RuntimeError("❌ modelFER.h5 model download failed.")
+                print("{'modelFER.h5'} model download failed.")
 
-        # CPU modeli mutlaka yükle
-        try:
-            with tf.device("/CPU:0"):
-                model = tf.keras.models.load_model(weight_path)
-                models["ModelCPU"] = {"model": model}
-                print("✅ modelFER.h5 loaded on CPU.")
-        except Exception as e:
-            raise RuntimeError(f"❌ Error loading model on CPU: {str(e)}")
+        model["model"] = tf.keras.models.load_model(weight_path)
 
-        return models
-
-
-
-
-
-    if not os.path.exists(weight_path):
-        if Download.download_from_drive(weight_url, weight_path) is not None:
-            print("modelFER.h5 model download successfully.")
+        if config_device == 'GPU' and 'GPU' in device:
+            with tf.device(device):
+                models["ModelGPU"] = model
         else:
-            print("modelFER.h5 model download failed.")
-
-    model = tf.keras.models.load_model(weight_path)
-
-    if config_device == 'GPU' and 'GPU' in device:
-        with tf.device(device):
-            models["ModelGPU"] = {"model": model}
-    else:
-        with tf.device(device):
-            models["ModelCPU"] = {"model": model}
-
+            with tf.device(device):
+                models["ModelCPU"] = model
 
     return models
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+"""
