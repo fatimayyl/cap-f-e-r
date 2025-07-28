@@ -2,21 +2,14 @@ import os
 import sys
 import numpy as np
 from PIL import Image as PILImage
-
-
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
-"""
-deepface_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../deepface'))
-sys.path.append(deepface_path)
-"""
 from deepface import DeepFace
 
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 
 from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.capsule import Capsule
 from sdks.novavision.src.helper.executor import Executor
-from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection #,ReturnAllScores
+from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection, ReturnAllScores
 from capsules.FacialEmotionRecognition.src.utils.response import build_response_deepface
 
 
@@ -35,31 +28,28 @@ class FacialEmotionRecognitionDeepFace(Capsule):
         detection_list = []
         self.image.value = np.asarray(self.image.value).astype(np.uint8)
 
-        # DeepFace ile tespit yapılır (detector_backend opencv)
-        try:
-            results = DeepFace.analyze(
-                img_path=self.image.value,
-                actions=["emotion"],
-                enforce_detection=True,
-                detector_backend="opencv"
-            )
-        except Exception as e:
-            print(f"[❌ DeepFace error] {e}")
-            return []
+        if len(self.image.detections) == 0:
+            return "Face information not found"
+        if len(self.image.detections) > 1:
+            return "Multiple face information found"
 
-        # Multi-face destekliyoruz ama her biri için Detection nesnesi oluşturulmalı
-        for result in results:
-            region = result.get("region", {})
+        bbox = self.image.detections[0]["boundingBox"]
+
+        x, y, w, h = int(bbox["left"]), int(bbox["top"]), int(bbox["width"]), int(bbox["height"])
+        face_crop = self.image.value[y:y+h, x:x+w]
+
+        try:
+            pil_image = PILImage.fromarray(face_crop.astype(np.uint8))
+            result = DeepFace.analyze(
+                img_path=np.array(pil_image),
+                actions=["emotion"],
+                enforce_detection=False,
+                detector_backend="opencv"
+            )[0]
+
             emotion = result["dominant_emotion"]
             confidence = result["emotion"][emotion]
             class_id = list(result["emotion"].keys()).index(emotion)
-
-            bbox = {
-                "left": region["x"],
-                "top": region["y"],
-                "width": region["w"],
-                "height": region["h"]
-            }
 
             detection = Detection(
                 boundingBox=bbox,
@@ -74,19 +64,14 @@ class FacialEmotionRecognitionDeepFace(Capsule):
 
             detection_list.append(detection)
 
+        except Exception as e:
+            return f"DeepFace error: {str(e)}"
+
         return detection_list
 
     def run(self):
-        # Redis’ten img yükle
         self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
-
-        # Yüz tespiti + duygular
-        detection_list = self.deepface_inference()
-
-        # 📌 En önemli satır: image.detections'a yaz!
-        self.image.detections = detection_list
-
-        # response’a bağla
+        self.detections = self.deepface_inference()
         packageModel = build_response_deepface(context=self)
         return packageModel
 
