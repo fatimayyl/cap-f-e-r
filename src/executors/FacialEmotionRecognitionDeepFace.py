@@ -9,7 +9,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.capsule import Capsule
 from sdks.novavision.src.helper.executor import Executor
-from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection, ReturnAllScores
+from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection
 from capsules.FacialEmotionRecognition.src.utils.response import build_response_deepface
 
 
@@ -18,7 +18,6 @@ class FacialEmotionRecognitionDeepFace(Capsule):
         super().__init__(request, bootstrap)
         self.request.model = PackageModel(**(self.request.data))
         self.image = self.request.get_param("inputImage")
-        self.return_all_scores = self.request.get_param("ReturnAllScores")
 
     @staticmethod
     def bootstrap(config: dict) -> dict:
@@ -34,7 +33,6 @@ class FacialEmotionRecognitionDeepFace(Capsule):
             return "Multiple face information found"
 
         bbox = self.image.detections[0]["boundingBox"]
-
         x, y, w, h = int(bbox["left"]), int(bbox["top"]), int(bbox["width"]), int(bbox["height"])
         face_crop = self.image.value[y:y+h, x:x+w]
 
@@ -47,22 +45,16 @@ class FacialEmotionRecognitionDeepFace(Capsule):
                 detector_backend="opencv"
             )[0]
 
-            emotion = result["dominant_emotion"]
-            confidence = result["emotion"][emotion]
-            class_id = list(result["emotion"].keys()).index(emotion)
-
-            detection = Detection(
-                boundingBox=bbox,
-                confidence=confidence,
-                classLabel=emotion.capitalize(),
-                classId=class_id,
-                imgUID=self.image.uID
-            )
-
-            if self.return_all_scores:
-                detection.extra = {"emotion_scores": result["emotion"]}
-
-            detection_list.append(detection)
+            emotion_scores = result["emotion"]
+            for idx, (label, score) in enumerate(emotion_scores.items()):
+                detection = Detection(
+                    boundingBox=bbox,
+                    confidence=score,
+                    classLabel=label.capitalize(),
+                    classId=idx,
+                    imgUID=self.image.uID
+                )
+                detection_list.append(detection)
 
         except Exception as e:
             return f"DeepFace error: {str(e)}"
