@@ -56,15 +56,21 @@ def load_models():
     device = select_device('0' if tf.config.list_physical_devices('GPU') else 'cpu')
     models["device"] = device
 
-    # 🚀 Yeni sistemde parametreyi model class'ı ile al
-    package: PackageModel = application.get_param("FacialEmotionRecognition")
+    # Burada "config" argümanını öncelikle elde etmen gerekiyor.
+    # Mesela config, application veya çağıran yerden geliyor olabilir.
+    # Senin durumda elinde config yoksa, önce config alman gerek.
+    # Örnek olarak şöyle yapabiliriz:
 
-    # Executor erişimi
-    executor_config = package.configs.executor
-    executor_model = executor_config.value  # this is FacialEmotionRecognition
+    # Öncelikle "FacialEmotionRecognition" paketinin config nesnesini al:
+    package_config = application.get_param(name="FacialEmotionRecognition", config="config")
+    # Ya da eğer parametre sırası farklıysa:
+    # package_config = application.get_param(config="FacialEmotionRecognition", name="config")
 
-    # Konfigürasyondan "CPU"/"GPU" bilgisi
-    config_device = executor_model.configs.configDevice.value
+    # Şimdi ConfigDevice bilgisini al:
+    device_preference = application.get_param(config=package_config, name="ConfigDevice")
+
+    # Eğer device_preference bir config objesi ise, içinden value'yu al:
+    config_device = device_preference.value if device_preference is not None else "cpu"
 
     # Model dosyası yoksa indir
     if not os.path.exists(weight_path):
