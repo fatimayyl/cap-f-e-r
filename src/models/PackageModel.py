@@ -27,7 +27,8 @@ class OutputImage(Output):
 class FacialEmotionRecognitionInputs(Inputs):
     inputImage: InputImage
 
-
+#???????
+"""
 class ConfigHalfTrue(Config):
     name: Literal["True"] = "True"
     value: Literal[True] = True
@@ -37,7 +38,7 @@ class ConfigHalfTrue(Config):
     class Config:
         title = "Enable"
 
-
+#???????
 class ConfigHalfFalse(Config):
     name: Literal["False"] = "False"
     value: Literal[False] = False
@@ -46,8 +47,10 @@ class ConfigHalfFalse(Config):
 
     class Config:
         title = "Disable"
+"""
 
 
+#facial emotion recognition için cihaz seçimi
 class ConfigDeviceGPU(Config):
     name: Literal["ConfigDeviceGPU"] = "ConfigDeviceGPU"
     value: Literal["GPU"] = "GPU"
@@ -69,10 +72,6 @@ class ConfigDeviceCPU(Config):
 
 
 class ConfigDevice(Config):
-    """
-        It refers to whether the model should run on a CPU or a GPU.
-        You can select the device type for inference or training process.
-    """
     name: Literal["ConfigDevice"] = "ConfigDevice"
     value: Union[ConfigDeviceCPU, ConfigDeviceGPU]
     type: Literal["object"] = "object"
@@ -81,7 +80,8 @@ class ConfigDevice(Config):
     class Config:
         title = "Device"
 
-
+"""
+#??????????*
 class ConfigDrawBBoxTrue(Config):
     name: Literal["True"] = "True"
     value: Literal[True] = True
@@ -90,9 +90,10 @@ class ConfigDrawBBoxTrue(Config):
 
     class Config:
         title = "Enable"
+"""
 
-
-#parametre
+"""
+#deepface için score belirliyor ama neden gray var anlamadım
 class ConfigReturnAllScoresTrue(Config):
     name: Literal["configConvertToGrayTrue"] = "configConvertToGrayTrue"
     value: Literal["True"] = "True"
@@ -101,10 +102,31 @@ class ConfigReturnAllScoresTrue(Config):
 
     class Config:
         title = "Yes"
-
+        
 
 class ConfigReturnAllScoresFalse(Config):
     name: Literal["configConvertToGrayFalse"] = "configConvertToGrayFalse"
+    value: Literal["False"] = "False"
+    type: Literal["string"] = "string"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "No"
+"""
+
+class ConfigReturnAllScoresTrue(Config):
+    name: Literal["returnAllScores"] = "returnAllScores"
+    value: Literal["True"] = "True"
+    type: Literal["string"] = "string"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "Yes"
+
+
+
+class ConfigReturnAllScoresFalse(Config):
+    name: Literal["returnAllScores"] = "returnAllScores"
     value: Literal["False"] = "False"
     type: Literal["string"] = "string"
     field: Literal["option"] = "option"
@@ -124,18 +146,23 @@ class ConfigReturnAllScores(Config):
 
 
 
-
+#????????
 class FacialEmotionRecognitionConfigs(Configs):
     configDevice: ConfigDevice
 
-
+"""
 class Detection(Detection):
     imgUID: str
+"""
 
+
+class EmotionDetection(Detection):
+    imgUID: str
 
 class OutputDetections(Output):
     name: Literal["outputDetections"] = "outputDetections"
-    value: List[Detection]
+    #value: List[Detection]
+    value: List[EmotionDetection]
     type: Literal["list"] = "list"
 
     class Config:
@@ -159,6 +186,21 @@ class FacialEmotionRecognitionRequest(Request):
 
 class FacialEmotionRecognitionResponse(Response):
     outputs: FacialEmotionRecognitionOutputs
+
+class FacialEmotionRecognitionExecutor(Config):
+    name: Literal["FacialEmotionRecognition"] = "FacialEmotionRecognition"
+    value: Union[FacialEmotionRecognitionRequest, FacialEmotionRecognitionResponse]
+    type: Literal["object"] = "object"
+    field: Literal["option"] = "option"
+
+    class Config:
+        title = "Facial Emotion Recognition"
+        json_schema_extra = {
+            "target": {
+                "value": 0
+            }
+        }
+
 
 #buraya kadar
 class FacialEmotionRecognitionDeepFaceInputs(Inputs):
@@ -185,21 +227,6 @@ class FacialEmotionRecognitionDeepFaceRequest(Request):
 
 class FacialEmotionRecognitionDeepFaceResponse(Response):
     outputs: FacialEmotionRecognitionDeepFaceOutputs
-
-
-class FacialEmotionRecognitionExecutor(Config):
-    name: Literal["FacialEmotionRecognition"] = "FacialEmotionRecognition"
-    value: Union[FacialEmotionRecognitionRequest, FacialEmotionRecognitionResponse]
-    type: Literal["object"] = "object"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "Facial Emotion Recognition"
-        json_schema_extra = {
-            "target": {
-                "value": 0
-            }
-        }
 
 
 class FacialEmotionRecognitionDeepFaceExecutor(Config):
