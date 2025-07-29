@@ -146,23 +146,23 @@ class ConfigReturnAllScores(Config):
 
 
 
-#????????
 class FacialEmotionRecognitionConfigs(Configs):
     configDevice: ConfigDevice
 
-"""
+
 class Detection(Detection):
     imgUID: str
+
+
 """
-
-
 class EmotionDetection(Detection):
     imgUID: str
+"""
 
 class OutputDetections(Output):
     name: Literal["outputDetections"] = "outputDetections"
     #value: List[Detection]
-    value: List[EmotionDetection]
+    value: List[Detection]=[]
     type: Literal["list"] = "list"
 
     class Config:
