@@ -5,8 +5,10 @@ from capsules.FacialEmotionRecognition.src.models.PackageModel import FacialEmot
 
 
 def build_response(context):
-    outputImage = OutputImage(value=context.outputImage)
-    outputDetections = OutputDetections(value=context.outputDetections)
+    print("DEBUG: context.prediction =", context.prediction)
+
+    outputImage = OutputImage(value=context.image)
+    outputDetections = OutputDetections(value=context.prediction)
     facialEmotionRecognitionOutputs = FacialEmotionRecognitionOutputs(outputDetections=outputDetections, outputImage=outputImage)
     facialEmotionRecognitionResponse = FacialEmotionRecognitionResponse(outputs=facialEmotionRecognitionOutputs)
     facialEmotionRecognitionExecutor = FacialEmotionRecognitionExecutor(value=facialEmotionRecognitionResponse)
@@ -19,8 +21,8 @@ def build_response(context):
 
 
 def build_response_deepface(context):
-    outputImage = OutputImage(value=context.outputImage)
-    outputDetections = OutputDetections(value=context.outputDetections)
+    outputImage = OutputImage(value=context.image)
+    outputDetections = OutputDetections(value=context.prediction)
     facialEmotionRecognitionDeepFaceOutputs = FacialEmotionRecognitionDeepFaceOutputs(outputDetections=outputDetections, outputImage=outputImage)
     facialEmotionRecognitionDeepFaceResponse = FacialEmotionRecognitionDeepFaceResponse(outputs=facialEmotionRecognitionDeepFaceOutputs)
     facialEmotionRecognitionDeepFaceExecutor = FacialEmotionRecognitionDeepFaceExecutor(value=facialEmotionRecognitionDeepFaceResponse)
