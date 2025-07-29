@@ -1,18 +1,16 @@
-
 import os
 import platform
 import tensorflow as tf
 
 from sdks.novavision.src.base.download import Download
 from sdks.novavision.src.base.application import Application
+from capsules.FacialEmotionRecognition.src.models import PackageModel
 
 weight_path = '/storage/modelFER.h5'
 weight_url = 'https://drive.google.com/file/d/1JBGZc7eMPCqVLWqUQhN-20yM4kS0XXER/view?usp=sharing'
-output_directory = '/storage/'
 
 
 def select_device(device='', batch_size=0, newline=True):
-    # device = None or 'cpu' or 0 or '0' or '0,1,2,3'
     s = f'TensorFlow Python-{platform.python_version()} tensorflow-{tf.__version__} '
     device = str(device).strip().lower().replace('gpu:', '').replace('none', '')
     cpu = device == 'cpu'
@@ -49,32 +47,40 @@ def select_device(device='', batch_size=0, newline=True):
         s = s.rstrip()
     return arg
 
+
 def load_models():
     models = {}
     model = {}
     application = Application()
+
     device = select_device('0' if tf.config.list_physical_devices('GPU') else 'cpu')
     models["device"] = device
-    app_param_task = application.get_param("FacialEmotionRecognition", "ConfigExecutor")
 
-    for i in app_param_task:
-        key = str(list(i.keys())[0])
-        config_device = i[key]['configs']['configDevice']['value']['value']
+    # 🚀 Yeni sistemde parametreyi model class'ı ile al
+    package: PackageModel = application.get_param("FacialEmotionRecognition")
 
-        if not os.path.exists(weight_path):
-            if Download.download_from_drive(weight_url, weight_path) is not None:
-                print(f"{'modelFER.h5'} model download successfully.")
+    # Executor erişimi
+    executor_config = package.configs.executor
+    executor_model = executor_config.value  # this is FacialEmotionRecognition
 
-            else:
-                print("{'modelFER.h5'} model download failed.")
+    # Konfigürasyondan "CPU"/"GPU" bilgisi
+    config_device = executor_model.configs.configDevice.value
 
-        model["model"] = tf.keras.models.load_model(weight_path)
-
-        if config_device == 'GPU' and 'GPU' in device:
-            with tf.device(device):
-                models["ModelGPU"] = model
+    # Model dosyası yoksa indir
+    if not os.path.exists(weight_path):
+        if Download.download_from_drive(weight_url, weight_path) is not None:
+            print("modelFER.h5 model download successfully.")
         else:
-            with tf.device(device):
-                models["ModelCPU"] = model
+            print("modelFER.h5 model download failed.")
+
+    # Model yükleniyor
+    model["model"] = tf.keras.models.load_model(weight_path)
+
+    # Cihaza uygun model ataması
+    with tf.device(device):
+        if config_device == 'GPU' and 'GPU' in device:
+            models["ModelGPU"] = model
+        else:
+            models["ModelCPU"] = model
 
     return models
