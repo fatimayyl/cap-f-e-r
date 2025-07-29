@@ -1,8 +1,9 @@
-
+import cv2
 import os
 import sys
 import numpy as np
 from PIL import Image as PILImage
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 
 from sdks.novavision.src.media.image import Image
@@ -11,12 +12,12 @@ from sdks.novavision.src.helper.executor import Executor
 from capsules.FacialEmotionRecognition.src.utils.utils import load_models
 from capsules.FacialEmotionRecognition.src.utils.response import build_response
 from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection
-
+from capsules.FacialEmotionRecognition.src.models.PackageModel import ImageDetect
 
 
 class FacialEmotionRecognition(Capsule):
     def __init__(self, request, bootstrap):
-        super().__init__(request,bootstrap)
+        super().__init__(request, bootstrap)
         self.request.model = PackageModel(**(self.request.data))
         self.image = self.request.get_param("inputImage")
         self.device = self.request.get_param("ConfigDevice")
@@ -26,10 +27,29 @@ class FacialEmotionRecognition(Capsule):
         else:
             self.model = self.bootstrap["ModelCPU"]["model"]
 
+        print("Model initialized:", self.model)
+
     @staticmethod
     def bootstrap(config: dict) -> dict:
         model = load_models()
+        print("Model loaded in bootstrap:", model)
         return model
+
+    def detect_faces(self, image):
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
+        detections = []
+        for (x, y, w, h) in faces:
+            detections.append({
+                "boundingBox": {
+                    "left": int(x),
+                    "top": int(y),
+                    "width": int(w),
+                    "height": int(h)
+                }
+            })
+        return detections
 
     def filter_bbox_face(self, face_detect):
         if len(face_detect) == 0:
@@ -49,21 +69,28 @@ class FacialEmotionRecognition(Capsule):
 
     def infer(self, image, detection, img_uid):
         detection_list = []
-        emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
-        face_img = self.filter_bbox_face(detection)
+        if not detection or len(detection) == 0:
+            return detection_list  # boş liste döndür
 
-        if type(face_img) == str:
-            return face_img
+        emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+
+        face_img = self.filter_bbox_face(detection)
+        if isinstance(face_img, str):
+            # Hata mesajı stringi yerine boş liste dön
+            return detection_list
 
         select_face = self.select_face_from_image(image, face_img)
         select_face_pil = PILImage.fromarray(select_face.astype(np.uint8))
         gray = select_face_pil.convert("L")
 
+        # Resize and normalize
         img = gray.resize((64, 64))
         img = np.array(img, dtype=np.float32) / 255.0
         img = np.expand_dims(img, axis=-1)
         img = np.expand_dims(img, axis=0)
+
         bbox = detection[0]["boundingBox"]
+
         roi_gray = gray.resize((48, 48))
         roi_gray = np.array(roi_gray, dtype=np.float32) / 255.0
         roi_gray = np.expand_dims(roi_gray, axis=0)
@@ -71,20 +98,53 @@ class FacialEmotionRecognition(Capsule):
         predicted_emotion = self.model.predict(roi_gray)
         max_index = int(np.argmax(predicted_emotion))
         emotion = emotion_labels[max_index]
+
         detect = Detection(
-            boundingBox=bbox, confidence=predicted_emotion[0][max_index],
-            classLabel=emotion, classId=max_index, imgUID=img_uid)
+            boundingBox=bbox,
+            confidence=predicted_emotion[0][max_index],
+            classLabel=emotion,
+            classId=max_index,
+            imgUID=img_uid
+        )
         detection_list.append(detect)
         return detection_list
 
     def run(self):
-        self.prediction = []
+        print("DEBUG: full request data:", self.request.data)
+
+        # Önce image nesnesini al (decode vb işlemlerle)
         self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
-        self.prediction = self.infer(self.image.value, self.image.detections, self.image.uID)
+
+        print("DEBUG: detections before infer:", getattr(self.image, "detections", None))
+
+        # Eğer detections yoksa request içinden al ya da OpenCV ile üret
+        if not hasattr(self.image, "detections") or not self.image.detections:
+            detections_in_request = self.request.data.get("inputs", {}).get("inputImage", {}).get("value", {}).get(
+                "detections")
+            if detections_in_request:
+                self.image.detections = detections_in_request
+                print("DEBUG: detections set from request.data:", self.image.detections)
+            else:
+                # OpenCV ile yüz algıla
+                self.image.detections = self.detect_faces(self.image.value)
+                print("DEBUG: detections generated by detect_faces:", self.image.detections)
+        else:
+            print("DEBUG: detections already exist")
+
+        # Infer çağrısı - virgül olmadan!
+        self.prediction = self.infer(self.image.value, getattr(self.image, "detections", []), self.image.uID)
+        print("DEBUG: prediction from infer:", self.prediction)
+
+        # Son olarak, frame'i redis veya benzeri kaydet
         self.image = Image.set_frame(img=self.image, package_uID=self.uID, redis_db=self.redis_db)
+        print("DEBUG: detections after set_frame:", getattr(self.image, "detections", None))
+
+        # Yanıt modelini oluştur ve döndür
         packageModel = build_response(context=self)
+        print("DEBUG: final packageModel:", packageModel)
         return packageModel
 
 
-if "__main__" == __name__:
+if __name__ == "__main__":
     Executor(sys.argv[1]).run()
+
