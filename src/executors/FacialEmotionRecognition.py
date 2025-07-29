@@ -1,100 +1,90 @@
+
 import os
-import cv2
+import sys
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import load_model
-import base64
+from PIL import Image as PILImage
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 
-from sdks.novavision.src.base.executor import Executor
-from sdks.novavision.src.base.model import Image, OutputImage
-
-from capsules.FacialEmotionRecognition.src.models.PackageModel import (
-    FacialEmotionRecognitionOutputs,
-    FacialEmotionRecognitionResponse,
-    OutputDetections,
-    Detection,
-    BoundingBox
-)
+from sdks.novavision.src.media.image import Image
+from sdks.novavision.src.base.capsule import Capsule
+from sdks.novavision.src.helper.executor import Executor
+from capsules.FacialEmotionRecognition.src.utils.utils import load_models
+from capsules.FacialEmotionRecognition.src.utils.response import build_response
+from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection
 
 
-class FacialEmotionRecognitionExecutor(Executor):
-    def __init__(self):
-        super().__init__()
-        self.model = None
-        self.labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
 
-    def load_model(self):
-        weight_path = '/storage/modelFER.h5'
-        if not os.path.exists(weight_path):
-            raise FileNotFoundError(f"Model weight not found at {weight_path}")
-        self.model = load_model(weight_path)
-        print("✅ Model loaded from:", weight_path)
+class FacialEmotionRecognition(Capsule):
+    def __init__(self, request, bootstrap):
+        super().__init__(request,bootstrap)
+        self.request.model = PackageModel(**(self.request.data))
+        self.image = self.request.get_param("inputImage")
+        self.device = self.request.get_param("ConfigDevice")
+        self.select_device = self.bootstrap["device"]
+        if self.device == "GPU" and "GPU" in self.select_device:
+            self.model = self.bootstrap["ModelGPU"]["model"]
+        else:
+            self.model = self.bootstrap["ModelCPU"]["model"]
 
-    def normalize_image(self, image):
-        if image.dtype != np.uint8:
-            print("🛠️ Normalizing image to uint8...")
-            image = (255 * image).clip(0, 255).astype(np.uint8)
+    @staticmethod
+    def bootstrap(config: dict) -> dict:
+        model = load_models()
+        return model
 
-        if image.ndim == 3:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        image = cv2.resize(image, (48, 48))
-        image = image.astype("float32") / 255.0
-        image = np.expand_dims(image, axis=-1)
-        image = np.expand_dims(image, axis=0)
-        return image
+    def filter_bbox_face(self, face_detect):
+        if len(face_detect) == 0:
+            return "Face information not found"
+        if len(face_detect) > 1:
+            return "Multiple face information found"
+        if len(face_detect) == 1:
+            return face_detect[0]["boundingBox"]
 
-    def annotate_image(self, image_np, label):
-        annotated = image_np.copy()
-        if annotated.ndim == 2:
-            annotated = cv2.cvtColor(annotated, cv2.COLOR_GRAY2BGR)
-        cv2.putText(annotated, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX,
-                    1, (0, 255, 0), 2, cv2.LINE_AA)
-        return annotated
+    def select_face_from_image(self, image, bbox):
+        left = int(bbox["left"])
+        top = int(bbox["top"])
+        width = int(bbox["width"])
+        height = int(bbox["height"])
+        face_image = image[top:top + height, left:left + width]
+        return face_image
 
-    def encode_image_to_base64(self, image_np):
-        success, encoded_img = cv2.imencode('.jpg', image_np)
-        if not success:
-            raise ValueError("cv2.imencode failed to encode image.")
-        return base64.b64encode(encoded_img.tobytes()).decode('utf-8')
+    def infer(self, image, detection, img_uid):
+        detection_list = []
+        emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+        face_img = self.filter_bbox_face(detection)
+
+        if type(face_img) == str:
+            return face_img
+
+        select_face = self.select_face_from_image(image, face_img)
+        select_face_pil = PILImage.fromarray(select_face.astype(np.uint8))
+        gray = select_face_pil.convert("L")
+
+        img = gray.resize((64, 64))
+        img = np.array(img, dtype=np.float32) / 255.0
+        img = np.expand_dims(img, axis=-1)
+        img = np.expand_dims(img, axis=0)
+        bbox = detection[0]["boundingBox"]
+        roi_gray = gray.resize((48, 48))
+        roi_gray = np.array(roi_gray, dtype=np.float32) / 255.0
+        roi_gray = np.expand_dims(roi_gray, axis=0)
+
+        predicted_emotion = self.model.predict(roi_gray)
+        max_index = int(np.argmax(predicted_emotion))
+        emotion = emotion_labels[max_index]
+        detect = Detection(
+            boundingBox=bbox, confidence=predicted_emotion[0][max_index],
+            classLabel=emotion, classId=max_index, imgUID=img_uid)
+        detection_list.append(detect)
+        return detection_list
 
     def run(self):
-        if self.model is None:
-            self.load_model()
+        self.prediction = []
+        self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
+        self.prediction = self.infer(self.image.value, self.image.detections, self.image.uID)
+        self.image = Image.set_frame(img=self.image, package_uID=self.uID, redis_db=self.redis_db)
+        packageModel = build_response(context=self)
+        return packageModel
 
-        # Doğru input key
-        image: Image = self.inputs.inputImage.value
-        image_np = image.value
 
-        print(f"📥 Input image shape: {image_np.shape}, dtype: {image_np.dtype}")
-
-        input_tensor = self.normalize_image(image_np)
-
-        predictions = self.model.predict(input_tensor)
-        emotion_index = np.argmax(predictions[0])
-        emotion_label = self.labels[emotion_index]
-        confidence = float(predictions[0][emotion_index])
-
-        print(f"🔍 Prediction: {emotion_label} ({confidence:.2f})")
-
-        # Annotate image
-        annotated_np = self.annotate_image(image_np, f"{emotion_label} ({confidence:.2f})")
-        image.bytes = self.encode_image_to_base64(annotated_np)
-
-        # OutputImage
-        output_image = OutputImage(name="outputImage", value=image)
-
-        # Optional: dummy detection
-        detection = Detection(
-            boundingBox=BoundingBox(left=0, top=0, width=1, height=1),
-            imgUID=image.uid,
-            label=emotion_label,
-            score=confidence
-        )
-        output_detections = OutputDetections(name="outputDetections", value=[detection])
-
-        # Final outputs
-        outputs = FacialEmotionRecognitionOutputs(
-            outputImage=output_image,
-            outputDetections=output_detections
-        )
-        self.response = FacialEmotionRecognitionResponse(outputs=outputs)
+if "__main__" == __name__:
+    Executor(sys.argv[1]).run()
