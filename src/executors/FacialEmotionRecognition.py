@@ -52,13 +52,12 @@ class FacialEmotionRecognition(Capsule):
     def infer(self, image, detection, img_uid):
         detection_list = []
         if not detection or len(detection) == 0:
-            return detection_list  # boş liste döndür
+            return detection_list
 
         emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
 
         face_img = self.filter_bbox_face(detection)
         if isinstance(face_img, str):
-            # Hata mesajı stringi yerine boş liste dön
             return detection_list
 
         select_face = self.select_face_from_image(image, face_img)
@@ -71,7 +70,7 @@ class FacialEmotionRecognition(Capsule):
         img = np.expand_dims(img, axis=-1)
         img = np.expand_dims(img, axis=0)
 
-        bbox = detection[0].boundingBox  # Detection objesi
+        bbox = detection[0].boundingBox
 
         roi_gray = gray.resize((48, 48))
         roi_gray = np.array(roi_gray, dtype=np.float32) / 255.0
@@ -83,7 +82,7 @@ class FacialEmotionRecognition(Capsule):
 
         detect = Detection(
             boundingBox=bbox,
-            confidence=float(predicted_emotion[0][max_index]),
+            confidence=1.0,
             classLabel=emotion,
             classId=max_index,
             imgUID=img_uid
@@ -97,18 +96,33 @@ class FacialEmotionRecognition(Capsule):
         self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
         print("DEBUG: detections before infer:", getattr(self.image, "detections", None))
 
-        detections_in_request = (
-            self.request.data.get("inputs", {})
-            .get("inputDetections", {})
-            .get("value", [])
+        inputs = (
+            self.request.data
+            .get("configs", {})
+            .get("executor", {})
+            .get("value", {})
+            .get("inputs", {})
         )
 
+        # Burada inputDetections bir dict, içinde 'value' var
+        input_detections_obj = inputs.get("inputDetections", {})
+
+        if isinstance(input_detections_obj, dict):
+            detections_in_request = input_detections_obj.get("value", [])
+        else:
+            detections_in_request = input_detections_obj
+
+        print("DEBUG: raw inputDetections:", input_detections_obj)
+        print("DEBUG: detections_in_request:", detections_in_request)
+
+        # Detection listesini image'a ekle
         if detections_in_request:
             self.image.detections = [Detection(**det) for det in detections_in_request]
             print("DEBUG: detections set from request.data:", self.image.detections)
         else:
             self.image.detections = []
             print("DEBUG: no detections found in request; skipping infer")
+        # --------------------------------------
 
         if not self.image.detections:
             self.prediction = []
@@ -120,14 +134,12 @@ class FacialEmotionRecognition(Capsule):
             )
             print("DEBUG: prediction from infer:", self.prediction)
 
-        # ⚡ Pydantic hatasını engellemek için sadece Detection objelerini serialize et
         self.image.detections = self.prediction
 
         self.image = Image.set_frame(
             img=self.image, package_uID=self.uID, redis_db=self.redis_db
         )
 
-        # PackageModel için context oluştur
         packageModel = build_response(context=self)
         print("DEBUG: final packageModel:", packageModel)
         return packageModel
