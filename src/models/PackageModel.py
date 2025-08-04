@@ -1,7 +1,6 @@
 from pydantic import Field, validator
 from typing import List, Optional, Union, Literal
-from sdks.novavision.src.base.model import Package, Detection, Input, Output, Image, Config, Inputs, Configs, Outputs, \
-    Response, Request
+from sdks.novavision.src.base.model import Package, Detection, Input, Output, Image, Config, Inputs, Configs, Outputs, Response, Request
 
 """
 class ImageDetect(Image):
@@ -65,6 +64,8 @@ class FacialEmotionRecognitionInputs(Inputs):
 
 # ???????
 """
+yeni actım 
+"""
 class ConfigHalfTrue(Config):
     name: Literal["True"] = "True"
     value: Literal[True] = True
@@ -83,7 +84,7 @@ class ConfigHalfFalse(Config):
 
     class Config:
         title = "Disable"
-"""
+
 
 
 # facial emotion recognition için cihaz seçimi
@@ -117,7 +118,7 @@ class ConfigDevice(Config):
         title = "Device"
 
 
-"""
+#yeni actım
 #??????????*
 class ConfigDrawBBoxTrue(Config):
     name: Literal["True"] = "True"
@@ -127,9 +128,9 @@ class ConfigDrawBBoxTrue(Config):
 
     class Config:
         title = "Enable"
-"""
 
-"""
+
+
 
 class ConfigReturnAllScoresTrue(Config):
     name: Literal["configConvertToGrayTrue"] = "configConvertToGrayTrue"
@@ -149,9 +150,8 @@ class ConfigReturnAllScoresFalse(Config):
 
     class Config:
         title = "No"
-"""
 
-
+""" yeni kapadım
 class ConfigReturnAllScoresTrue(Config):
     name: Literal["returnAllScores"] = "returnAllScores"
     value: Literal["True"] = "True"
@@ -170,6 +170,9 @@ class ConfigReturnAllScoresFalse(Config):
 
     class Config:
         title = "No"
+"""
+
+
 
 
 class ConfigReturnAllScores(Config):
