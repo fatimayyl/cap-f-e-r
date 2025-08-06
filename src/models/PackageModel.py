@@ -29,7 +29,7 @@ class InputImage(Input):
 class InputDetections(Input):
     name: Literal["inputDetections"] = "inputDetections"
     value: List[Detection]
-    type: Literal["list"] = "list"
+    type: str = "list"
 
     class Config:
         title = "Detections"
