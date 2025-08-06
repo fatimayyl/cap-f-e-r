@@ -18,6 +18,10 @@ class FacialEmotionRecognition(Capsule):
         super().__init__(request, bootstrap)
         self.request.model = PackageModel(**(self.request.data))
         self.image = self.request.get_param("inputImage")
+
+        self.detection=self.request.get_param("inputDetections")
+        print("self.detection:",self.detection)
+
         self.device = self.request.get_param("ConfigDevice")
         self.select_device = self.bootstrap["device"]
         if self.device == "GPU" and "GPU" in self.select_device:
@@ -34,22 +38,39 @@ class FacialEmotionRecognition(Capsule):
         return model
 
     def filter_bbox_face(self, face_detect):
+
         if len(face_detect) == 0:
             return "Face information not found"
         if len(face_detect) > 1:
             return "Multiple face information found"
         if len(face_detect) == 1:
-            return face_detect[0].boundingBox  # Detection objesi
+            return face_detect[0]['boundingBox'] # Detection objesi
 
     def select_face_from_image(self, image, bbox):
-        left = int(bbox["left"])
-        top = int(bbox["top"])
+        # Eğer image bir Image objesi ise onun frame attribute'unu kullan
+        if hasattr(image, "frame"):
+            img_array = image.frame
+        else:
+            img_array = image  # Direkt numpy array ise
+
+        # Şimdi img_array numpy array olduğu için shape kullanılabilir
+        height_img, width_img = img_array.shape[:2]
+
+        left = max(0, int(bbox["left"]))
+        top = max(0, int(bbox["top"]))
         width = int(bbox["width"])
         height = int(bbox["height"])
-        face_image = image[top:top + height, left:left + width]
+
+        right = min(left + width, width_img)
+        bottom = min(top + height, height_img)
+
+        face_image = img_array[top:bottom, left:right]
+
+        print(f"select_face_from_image: face_image shape: {face_image.shape}, dtype: {face_image.dtype}")
         return face_image
 
     def infer(self, image, detection, img_uid):
+
         detection_list = []
         if not detection or len(detection) == 0:
             return detection_list
@@ -57,10 +78,13 @@ class FacialEmotionRecognition(Capsule):
         emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
 
         face_img = self.filter_bbox_face(detection)
+        print("face_img:",face_img)
+
         if isinstance(face_img, str):
             return detection_list
 
         select_face = self.select_face_from_image(image, face_img)
+        print("select_face:",select_face)
         select_face_pil = PILImage.fromarray(select_face.astype(np.uint8))
         gray = select_face_pil.convert("L")
 
@@ -70,7 +94,8 @@ class FacialEmotionRecognition(Capsule):
         img = np.expand_dims(img, axis=-1)
         img = np.expand_dims(img, axis=0)
 
-        bbox = detection[0].boundingBox
+        bbox = face_img
+
 
         roi_gray = gray.resize((48, 48))
         roi_gray = np.array(roi_gray, dtype=np.float32) / 255.0
@@ -87,63 +112,18 @@ class FacialEmotionRecognition(Capsule):
             classId=max_index,
             imgUID=img_uid
         )
+
         detection_list.append(detect)
         return detection_list
 
+
     def run(self):
-        print("DEBUG: full request data:", self.request.data)
-
+        self.prediction = []
         self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
-        print("DEBUG: detections before infer:", getattr(self.image, "detections", None))
-
-        inputs = (
-            self.request.data
-            .get("configs", {})
-            .get("executor", {})
-            .get("value", {})
-            .get("inputs", {})
-        )
-
-        # Burada inputDetections bir dict, içinde 'value' var
-        input_detections_obj = inputs.get("inputDetections", {})
-
-        if isinstance(input_detections_obj, dict):
-            detections_in_request = input_detections_obj.get("value", [])
-        else:
-            detections_in_request = input_detections_obj
-
-        print("DEBUG: raw inputDetections:", input_detections_obj)
-        print("DEBUG: detections_in_request:", detections_in_request)
-
-        # Detection listesini image'a ekle
-        if detections_in_request:
-            self.image.detections = [Detection(**det) for det in detections_in_request]
-            print("DEBUG: detections set from request.data:", self.image.detections)
-        else:
-            self.image.detections = []
-            print("DEBUG: no detections found in request; skipping infer")
-        # --------------------------------------
-
-        if not self.image.detections:
-            self.prediction = []
-        else:
-            self.prediction = self.infer(
-                self.image.value,
-                getattr(self.image, "detections", []),
-                self.image.uID
-            )
-            print("DEBUG: prediction from infer:", self.prediction)
-
-        self.image.detections = self.prediction
-
-        self.image = Image.set_frame(
-            img=self.image, package_uID=self.uID, redis_db=self.redis_db
-        )
-
+        self.prediction = self.infer(self.image, self.detection, self.image.uID)
+        self.image = Image.set_frame(img=self.image, package_uID=self.uID, redis_db=self.redis_db)
         packageModel = build_response(context=self)
-        print("DEBUG: final packageModel:", packageModel)
         return packageModel
-
 
 if __name__ == "__main__":
     Executor(sys.argv[1]).run()
