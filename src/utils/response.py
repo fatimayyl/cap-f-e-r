@@ -46,5 +46,3 @@ def build_response_deepface(context):
     package = PackageHelper(packageModel=PackageModel, packageConfigs=packageConfigs)
     packageModel = package.build_model(context)
     return packageModel
-
-s
