@@ -53,8 +53,7 @@ class FacialEmotionRecognition(Capsule):
         else:
             img_array = image  # Direkt numpy array ise
 
-        # Şimdi img_array numpy array olduğu için shape kullanılabilir
-        height_img, width_img = img_array.shape[:2]
+        height_img, width_img = img_array.value.shape[:2]
 
         left = max(0, int(bbox["left"]))
         top = max(0, int(bbox["top"]))
@@ -64,9 +63,10 @@ class FacialEmotionRecognition(Capsule):
         right = min(left + width, width_img)
         bottom = min(top + height, height_img)
 
-        face_image = img_array[top:bottom, left:right]
+        face_image = img_array.value[top:bottom, left:right]
 
         print(f"select_face_from_image: face_image shape: {face_image.shape}, dtype: {face_image.dtype}")
+
         return face_image
 
     def infer(self, image, detection, img_uid):
@@ -78,13 +78,12 @@ class FacialEmotionRecognition(Capsule):
         emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
 
         face_img = self.filter_bbox_face(detection)
-        print("face_img:",face_img)
 
         if isinstance(face_img, str):
             return detection_list
 
-        select_face = self.select_face_from_image(image, face_img)
-        print("select_face:",select_face)
+        select_face = self.select_face_from_image(image,face_img)
+
         select_face_pil = PILImage.fromarray(select_face.astype(np.uint8))
         gray = select_face_pil.convert("L")
 
