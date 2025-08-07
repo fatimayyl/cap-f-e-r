@@ -8,24 +8,6 @@ from capsules.FacialEmotionRecognition.src.models.PackageModel import FacialEmot
 def build_response(context):
     print("DEBUG: context.prediction =", context.prediction)
 
-    outputImage = OutputDetections(value=context.image)
-    outputDetections = OutputDetections(value=context.prediction)
-    facialEmotionRecognitionOutputs = FacialEmotionRecognitionOutputs(outputDetections=outputDetections, outputImage=outputImage)
-    facialEmotionRecognitionResponse = FacialEmotionRecognitionResponse(outputs=facialEmotionRecognitionOutputs)
-    facialEmotionRecognitionExecutor = FacialEmotionRecognitionExecutor(value=facialEmotionRecognitionResponse)
-    executor = ConfigExecutor(value=facialEmotionRecognitionExecutor)
-    packageConfigs = PackageConfigs(executor=executor)
-    package = PackageHelper(packageModel=PackageModel, packageConfigs=packageConfigs)
-    packageModel = package.build_model(context)
-    return packageModel
-"""
-
-
-def build_response(context):
-    print("DEBUG: context.prediction =", context.prediction)
-
-    # OutputImage istiyorsan önce tanımla yoksa sil
-    # Eğer sadece detection dönüyorsan outputImage'ı kaldır
     outputDetections = OutputDetections(value=context.prediction)
     facialEmotionRecognitionOutputs = FacialEmotionRecognitionOutputs(outputDetections=outputDetections)
     facialEmotionRecognitionResponse = FacialEmotionRecognitionResponse(outputs=facialEmotionRecognitionOutputs)
@@ -36,12 +18,27 @@ def build_response(context):
     packageModel = package.build_model(context)
     return packageModel
 
+"""
+
+
+def build_response(context):
+    print("DEBUG: context.prediction =", context.prediction)
+    outputDetections = OutputDetections(value=context.prediction)
+    facialEmotionRecognitionOutputs = FacialEmotionRecognitionOutputs(outputDetections=outputDetections)
+    facialEmotionRecognitionResponse = FacialEmotionRecognitionResponse(outputs=facialEmotionRecognitionOutputs)
+    facialEmotionRecognitionExecutor = FacialEmotionRecognitionExecutor(value=facialEmotionRecognitionResponse)
+    executor = ConfigExecutor(value=facialEmotionRecognitionExecutor)
+    packageConfigs = PackageConfigs(executor=executor)
+    package = PackageHelper(packageModel=PackageModel, packageConfigs=packageConfigs)
+    packageModel = package.build_model(context)
+    print("packageModel:",packageModel)
+    return packageModel
+
 
 
 def build_response_deepface(context):
-    outputImage = OutputDetections(value=context.image)
-    outputDetections = OutputDetections(value=context.prediction)
-    facialEmotionRecognitionDeepFaceOutputs = FacialEmotionRecognitionDeepFaceOutputs(outputDetections=outputDetections, outputImage=outputImage)
+    outputDetections = OutputDetections(value=context.detections)
+    facialEmotionRecognitionDeepFaceOutputs = FacialEmotionRecognitionDeepFaceOutputs(outputDetections=outputDetections ) #, outputImage=outputImage
     facialEmotionRecognitionDeepFaceResponse = FacialEmotionRecognitionDeepFaceResponse(outputs=facialEmotionRecognitionDeepFaceOutputs)
     facialEmotionRecognitionDeepFaceExecutor = FacialEmotionRecognitionDeepFaceExecutor(value=facialEmotionRecognitionDeepFaceResponse)
     executor = ConfigExecutor(value=facialEmotionRecognitionDeepFaceExecutor)
@@ -50,3 +47,4 @@ def build_response_deepface(context):
     packageModel = package.build_model(context)
     return packageModel
 
+s
