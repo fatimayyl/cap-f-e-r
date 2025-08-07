@@ -1,20 +1,6 @@
 from pydantic import Field, validator
 from typing import List, Optional, Union, Literal
-from sdks.novavision.src.base.model import Package, Detection, Input, Output, Image, Config, Inputs, Configs, Outputs, Response, Request
-
-"""
-class ImageDetect(Image):
-    detections: Optional[List[Detection]] = None
-
-
-class InputImage(Input):
-    name: Literal["inputImage"] = "inputImage"
-    value: Image
-    type: str = "object"
-
-    class Config:
-        title = "Image"
-"""
+from sdks.novavision.src.base.model import Package, Detection, Input, Output, Image, Config, Inputs, Configs, Outputs, Response, Request,KeyPoints
 
 
 class InputImage(Input):
@@ -35,22 +21,15 @@ class InputDetections(Input):
         title = "Detections"
 
 
-"""
-class OutputImage(Output):
-    name: Literal["outputImage"] = "outputImage"
-    value: Image
-    type: str = "object"
-
-    class Config:
-        title = "Image"
-
-"""
+class Detection(Detection):
+    keyPoints: Optional[List[KeyPoints]] = None
+    imgUID: str
 
 
 # yeni eklendi
 class OutputDetections(Output):
     name: Literal["outputDetections"] = "outputDetections"
-    value: List[Detection] = []
+    value: List[Detection]
     type: Literal["list"] = "list"
 
     class Config:
@@ -189,12 +168,9 @@ class FacialEmotionRecognitionConfigs(Configs):
     configDevice: ConfigDevice
 
 
-class Detection(Detection):
-    imgUID: str
-
-
 class FacialEmotionRecognitionOutputs(Outputs):
     outputDetections: OutputDetections
+
 
 
 class FacialEmotionRecognitionRequest(Request):
@@ -229,7 +205,6 @@ class FacialEmotionRecognitionExecutor(Config):
 # buraya kadar
 class FacialEmotionRecognitionDeepFaceInputs(Inputs):
     inputImage: InputImage
-    # deepface de detection girişine gerek olmayabilir
     inputDetections: InputDetections
 
 
