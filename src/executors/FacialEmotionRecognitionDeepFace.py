@@ -6,13 +6,12 @@ from PIL import Image as PILImage
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 
-from deepface import DeepFace
-
 from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.capsule import Capsule
 from sdks.novavision.src.helper.executor import Executor
 from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection, ConfigReturnAllScores
 from capsules.FacialEmotionRecognition.src.utils.response import build_response_deepface
+from capsules.FacialEmotionRecognition.src.lib.deepface import DeepFace
 
 
 class FacialEmotionRecognitionDeepFace(Capsule):
