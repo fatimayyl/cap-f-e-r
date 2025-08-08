@@ -2,14 +2,16 @@ import os
 import sys
 import numpy as np
 from PIL import Image as PILImage
-from deepface import DeepFace
+
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
+
+from deepface import DeepFace
 
 from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.capsule import Capsule
 from sdks.novavision.src.helper.executor import Executor
-from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection, ReturnAllScores
+from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection, ConfigReturnAllScores
 from capsules.FacialEmotionRecognition.src.utils.response import build_response_deepface
 
 
@@ -18,7 +20,16 @@ class FacialEmotionRecognitionDeepFace(Capsule):
         super().__init__(request, bootstrap)
         self.request.model = PackageModel(**(self.request.data))
         self.image = self.request.get_param("inputImage")
+        self.input_detections = self.request.get_param("inputDetections")
+        print("self.input_detections :", self.input_detections )
+
+        # detections'ı Image nesnesine sonradan eklemek için
+        if self.input_detections:
+            self.image["detections"] = self.input_detections
+
         self.return_all_scores = self.request.get_param("ReturnAllScores")
+
+
 
     @staticmethod
     def bootstrap(config: dict) -> dict:
@@ -64,17 +75,34 @@ class FacialEmotionRecognitionDeepFace(Capsule):
 
             detection_list.append(detection)
 
+
         except Exception as e:
-            return f"DeepFace error: {str(e)}"
+            print(f"DeepFace error: {str(e)}")
+            return []
+
 
         return detection_list
 
+    """
     def run(self):
+
         self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
         self.detections = self.deepface_inference()
         packageModel = build_response_deepface(context=self)
         return packageModel
+    """
 
+    def run(self):
+
+        self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
+        if self.input_detections:
+            self.image.detections = self.input_detections
+        else:
+            self.image.detections = []
+
+        self.detections = self.deepface_inference()
+        packageModel = build_response_deepface(context=self)
+        return packageModel
 
 if __name__ == "__main__":
     Executor(sys.argv[1]).run()
