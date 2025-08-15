@@ -1,26 +1,21 @@
+
 import os
 import sys
 import numpy as np
 from PIL import Image as PILImage
 
-
-
-sys.path.append('/opt/project/capsules/FacialEmotionRecognition/src/lib/deepface')
+sys.path.append('/opt/project/capsules/FacialEmotionRecognition/src/lib')
+from deepface.DeepFace import analyze, verify, build_model
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
-
-
 
 from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.capsule import Capsule
 from sdks.novavision.src.helper.executor import Executor
+from capsules.FacialEmotionRecognition.src.utils.utilsdeepface import load_emotion_model
 from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection, ConfigReturnAllScores
 from capsules.FacialEmotionRecognition.src.utils.response import build_response_deepface
 
-
-
-# import deepface
-from deepface import DeepFace
 
 
 class FacialEmotionRecognitionDeepFace(Capsule):
@@ -37,11 +32,14 @@ class FacialEmotionRecognitionDeepFace(Capsule):
 
         self.return_all_scores = self.request.get_param("ReturnAllScores")
 
-
-
     @staticmethod
     def bootstrap(config: dict) -> dict:
-        return {}
+        model = load_emotion_model(config)
+        print("Model loaded in bootstrap:", model)
+        return {
+            "device": "/device:CPU:0",
+            "ModelCPU": {"model": model}
+        }
 
     def deepface_inference(self):
         detection_list = []
@@ -59,7 +57,7 @@ class FacialEmotionRecognitionDeepFace(Capsule):
 
         try:
             pil_image = PILImage.fromarray(face_crop.astype(np.uint8))
-            result = DeepFace.analyze(
+            result = analyze(
                 img_path=np.array(pil_image),
                 actions=["emotion"],
                 enforce_detection=False,
@@ -91,14 +89,6 @@ class FacialEmotionRecognitionDeepFace(Capsule):
 
         return detection_list
 
-    """
-    def run(self):
-
-        self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
-        self.detections = self.deepface_inference()
-        packageModel = build_response_deepface(context=self)
-        return packageModel
-    """
 
     def run(self):
 
