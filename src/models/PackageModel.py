@@ -205,7 +205,7 @@ class FacialEmotionRecognitionExecutor(Config):
 # buraya kadar
 class FacialEmotionRecognitionDeepFaceInputs(Inputs):
     inputImage: InputImage
-    inputDetections: InputDetections
+    #inputDetections: InputDetections
 
 
 class FacialEmotionRecognitionDeepFaceConfigs(Configs):
