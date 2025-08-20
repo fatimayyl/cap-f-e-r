@@ -89,6 +89,14 @@ class FacialEmotionRecognitionDeepFace(Capsule):
 
         return detection_list
 
+    """
+    def run(self):
+
+        self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
+        self.detections = self.deepface_inference()
+        packageModel = build_response_deepface(context=self)
+        return packageModel
+    """
 
     def run(self):
 
