@@ -19,8 +19,8 @@ class FacialEmotionRecognition(Capsule):
         self.request.model = PackageModel(**(self.request.data))
         self.image = self.request.get_param("inputImage")
 
-        self.detection=self.request.get_param("inputDetections")
-        print("self.detection:",self.detection)
+        self.detection = self.request.get_param("inputDetections")
+        print("self.detection:", self.detection)
 
         self.device = self.request.get_param("ConfigDevice")
         self.select_device = self.bootstrap["device"]
@@ -44,7 +44,7 @@ class FacialEmotionRecognition(Capsule):
         if len(face_detect) > 1:
             return "Multiple face information found"
         if len(face_detect) == 1:
-            return face_detect[0]['boundingBox'] # Detection objesi
+            return face_detect[0]['boundingBox']  # Detection objesi
 
     def select_face_from_image(self, image, bbox):
         # Eğer image bir Image objesi ise onun frame attribute'unu kullan
@@ -82,7 +82,7 @@ class FacialEmotionRecognition(Capsule):
         if isinstance(face_img, str):
             return detection_list
 
-        select_face = self.select_face_from_image(image,face_img)
+        select_face = self.select_face_from_image(image, face_img)
 
         select_face_pil = PILImage.fromarray(select_face.astype(np.uint8))
         gray = select_face_pil.convert("L")
@@ -95,18 +95,30 @@ class FacialEmotionRecognition(Capsule):
 
         bbox = face_img
 
-
         roi_gray = gray.resize((48, 48))
         roi_gray = np.array(roi_gray, dtype=np.float32) / 255.0
         roi_gray = np.expand_dims(roi_gray, axis=0)
 
         predicted_emotion = self.model.predict(roi_gray)
+
+        # Debug: Model çıktısını yazdır
+        print(f"Model prediction raw: {predicted_emotion}")
+        print(f"Model prediction shape: {predicted_emotion.shape}")
+
         max_index = int(np.argmax(predicted_emotion))
         emotion = emotion_labels[max_index]
 
+        # FIXED: Gerçek confidence skorunu kullan
+        confidence = float(predicted_emotion[0][max_index])  # Modelin verdiği gerçek skor
+
+        # Debug: Confidence değerini yazdır
+        print(f"Predicted emotion: {emotion}")
+        print(f"Confidence score: {confidence}")
+        print(f"All scores: {predicted_emotion[0]}")
+
         detect = Detection(
             boundingBox=bbox,
-            confidence=1.0,
+            confidence=confidence,  # ← Artık gerçek confidence skorunu kullanıyor
             classLabel=emotion,
             classId=max_index,
             imgUID=img_uid
@@ -115,7 +127,6 @@ class FacialEmotionRecognition(Capsule):
         detection_list.append(detect)
         return detection_list
 
-
     def run(self):
         self.prediction = []
         self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
@@ -123,6 +134,7 @@ class FacialEmotionRecognition(Capsule):
         self.image = Image.set_frame(img=self.image, package_uID=self.uID, redis_db=self.redis_db)
         packageModel = build_response(context=self)
         return packageModel
+
 
 if __name__ == "__main__":
     Executor(sys.argv[1]).run()
