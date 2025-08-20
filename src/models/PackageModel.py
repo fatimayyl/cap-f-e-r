@@ -26,7 +26,6 @@ class Detection(Detection):
     imgUID: str
 
 
-# yeni eklendi
 class OutputDetections(Output):
     name: Literal["outputDetections"] = "outputDetections"
     value: List[Detection]
@@ -41,10 +40,6 @@ class FacialEmotionRecognitionInputs(Inputs):
     inputDetections: InputDetections
 
 
-# ???????
-"""
-yeni actım 
-"""
 class ConfigHalfTrue(Config):
     name: Literal["True"] = "True"
     value: Literal[True] = True
@@ -54,7 +49,7 @@ class ConfigHalfTrue(Config):
     class Config:
         title = "Enable"
 
-#???????
+
 class ConfigHalfFalse(Config):
     name: Literal["False"] = "False"
     value: Literal[False] = False
@@ -66,7 +61,6 @@ class ConfigHalfFalse(Config):
 
 
 
-# facial emotion recognition için cihaz seçimi
 class ConfigDeviceGPU(Config):
     name: Literal["ConfigDeviceGPU"] = "ConfigDeviceGPU"
     value: Literal["GPU"] = "GPU"
@@ -97,8 +91,6 @@ class ConfigDevice(Config):
         title = "Device"
 
 
-#yeni actım
-#??????????*
 class ConfigDrawBBoxTrue(Config):
     name: Literal["True"] = "True"
     value: Literal[True] = True
@@ -112,26 +104,6 @@ class ConfigDrawBBoxTrue(Config):
 
 
 class ConfigReturnAllScoresTrue(Config):
-    name: Literal["configConvertToGrayTrue"] = "configConvertToGrayTrue"
-    value: Literal["True"] = "True"
-    type: Literal["string"] = "string"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "Yes"
-
-
-class ConfigReturnAllScoresFalse(Config):
-    name: Literal["configConvertToGrayFalse"] = "configConvertToGrayFalse"
-    value: Literal["False"] = "False"
-    type: Literal["string"] = "string"
-    field: Literal["option"] = "option"
-
-    class Config:
-        title = "No"
-
-""" yeni kapadım
-class ConfigReturnAllScoresTrue(Config):
     name: Literal["returnAllScores"] = "returnAllScores"
     value: Literal["True"] = "True"
     type: Literal["string"] = "string"
@@ -149,7 +121,7 @@ class ConfigReturnAllScoresFalse(Config):
 
     class Config:
         title = "No"
-"""
+
 
 
 
@@ -202,10 +174,9 @@ class FacialEmotionRecognitionExecutor(Config):
         }
 
 
-# buraya kadar
+
 class FacialEmotionRecognitionDeepFaceInputs(Inputs):
     inputImage: InputImage
-    #inputDetections: InputDetections
 
 
 class FacialEmotionRecognitionDeepFaceConfigs(Configs):
