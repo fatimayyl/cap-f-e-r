@@ -6,7 +6,7 @@ from sdks.novavision.src.base.download import Download
 from sdks.novavision.src.base.application import Application
 from capsules.FacialEmotionRecognition.src.models import PackageModel
 
-weight_path = '/storage/video.h5'
+weight_path = '/storage/model.h5'
 weight_url = 'https://drive.google.com/file/d/1VsB0p2uomNRmFuyAC6eqQOR24b1c3aoY/view?usp=drive_link'
 
 
@@ -56,33 +56,20 @@ def load_models():
     device = select_device('0' if tf.config.list_physical_devices('GPU') else 'cpu')
     models["device"] = device
 
-    # Burada "config" argümanını öncelikle elde etmen gerekiyor.
-    # Mesela config, application veya çağıran yerden geliyor olabilir.
-    # Senin durumda elinde config yoksa, önce config alman gerek.
-    # Örnek olarak şöyle yapabiliriz:
-
-    # Öncelikle "FacialEmotionRecognition" paketinin config nesnesini al:
     package_config = application.get_param(name="FacialEmotionRecognition", config="config")
-    # Ya da eğer parametre sırası farklıysa:
-    # package_config = application.get_param(config="FacialEmotionRecognition", name="config")
 
-    # Şimdi ConfigDevice bilgisini al:
     device_preference = application.get_param(config=package_config, name="ConfigDevice")
 
-    # Eğer device_preference bir config objesi ise, içinden value'yu al:
     config_device = device_preference.value if device_preference is not None else "cpu"
 
-    # Model dosyası yoksa indir
     if not os.path.exists(weight_path):
         if Download.download_from_drive(weight_url, weight_path) is not None:
             print("modelFER.h5 model download successfully.")
         else:
             print("modelFER.h5 model download failed.")
 
-    # Model yükleniyor
     model["model"] = tf.keras.models.load_model(weight_path)
 
-    # Cihaza uygun model ataması
     with tf.device(device):
         if config_device == 'GPU' and 'GPU' in device:
             models["ModelGPU"] = model
