@@ -44,14 +44,13 @@ class FacialEmotionRecognition(Capsule):
         if len(face_detect) > 1:
             return "Multiple face information found"
         if len(face_detect) == 1:
-            return face_detect[0]['boundingBox']  # Detection objesi
+            return face_detect[0]['boundingBox']
 
     def select_face_from_image(self, image, bbox):
-        # Eğer image bir Image objesi ise onun frame attribute'unu kullan
         if hasattr(image, "frame"):
             img_array = image.frame
         else:
-            img_array = image  # Direkt numpy array ise
+            img_array = image
 
         height_img, width_img = img_array.value.shape[:2]
 
@@ -87,7 +86,6 @@ class FacialEmotionRecognition(Capsule):
         select_face_pil = PILImage.fromarray(select_face.astype(np.uint8))
         gray = select_face_pil.convert("L")
 
-        # Resize and normalize
         img = gray.resize((64, 64))
         img = np.array(img, dtype=np.float32) / 255.0
         img = np.expand_dims(img, axis=-1)
@@ -101,24 +99,21 @@ class FacialEmotionRecognition(Capsule):
 
         predicted_emotion = self.model.predict(roi_gray)
 
-        # Debug: Model çıktısını yazdır
         print(f"Model prediction raw: {predicted_emotion}")
         print(f"Model prediction shape: {predicted_emotion.shape}")
 
         max_index = int(np.argmax(predicted_emotion))
         emotion = emotion_labels[max_index]
 
-        # FIXED: Gerçek confidence skorunu kullan
-        confidence = float(predicted_emotion[0][max_index])  # Modelin verdiği gerçek skor
+        confidence = float(predicted_emotion[0][max_index])
 
-        # Debug: Confidence değerini yazdır
         print(f"Predicted emotion: {emotion}")
         print(f"Confidence score: {confidence}")
         print(f"All scores: {predicted_emotion[0]}")
 
         detect = Detection(
             boundingBox=bbox,
-            confidence=confidence,  # ← Artık gerçek confidence skorunu kullanıyor
+            confidence=confidence,
             classLabel=emotion,
             classId=max_index,
             imgUID=img_uid
