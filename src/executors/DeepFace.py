@@ -16,7 +16,7 @@ from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageMod
 from capsules.FacialEmotionRecognition.src.utils.response import build_response_deepface
 
 
-class FacialEmotionRecognitionDeepFace(Capsule):
+class DeepFace(Capsule):
     def __init__(self, request, bootstrap):
         super().__init__(request, bootstrap)
         self.request.model = PackageModel(**(self.request.data))
