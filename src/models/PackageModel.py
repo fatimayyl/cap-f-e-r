@@ -35,10 +35,6 @@ class OutputDetections(Output):
         title = "Detections"
 
 
-class FacialEmotionRecognitionInputs(Inputs):
-    inputImage: InputImage
-    inputDetections: InputDetections
-
 
 class ConfigHalfTrue(Config):
     name: Literal["True"] = "True"
@@ -91,6 +87,7 @@ class ConfigDevice(Config):
         title = "Device"
 
 
+
 class ConfigDrawBBoxTrue(Config):
     name: Literal["True"] = "True"
     value: Literal[True] = True
@@ -123,9 +120,6 @@ class ConfigReturnAllScoresFalse(Config):
         title = "No"
 
 
-
-
-
 class ConfigReturnAllScores(Config):
     name: Literal["returnAllScores"] = "returnAllScores"
     value: Union[ConfigReturnAllScoresTrue, ConfigReturnAllScoresFalse]
@@ -136,18 +130,23 @@ class ConfigReturnAllScores(Config):
         title = "Return All Scores"
 
 
-class FacialEmotionRecognitionConfigs(Configs):
+
+
+
+class FacialEmotionConfigs(Configs):
     configDevice: ConfigDevice
 
+class FacialEmotionInputs(Inputs):
+    inputImage: InputImage
+    inputDetections: InputDetections
 
-class FacialEmotionRecognitionOutputs(Outputs):
+class FacialEmotionOutputs(Outputs):
     outputDetections: OutputDetections
 
 
-
-class FacialEmotionRecognitionRequest(Request):
-    inputs: Optional[FacialEmotionRecognitionInputs] = None
-    configs: FacialEmotionRecognitionConfigs
+class FacialEmotionRequest(Request):
+    inputs: Optional[FacialEmotionInputs] = None
+    configs: FacialEmotionConfigs
 
     class Config:
         json_schema_extra = {
@@ -155,18 +154,18 @@ class FacialEmotionRecognitionRequest(Request):
         }
 
 
-class FacialEmotionRecognitionResponse(Response):
-    outputs: FacialEmotionRecognitionOutputs
+class FacialEmotionResponse(Response):
+    outputs: FacialEmotionOutputs
 
 
-class FacialEmotionRecognitionExecutor(Config):
-    name: Literal["FacialEmotionRecognition"] = "FacialEmotionRecognition"
-    value: Union[FacialEmotionRecognitionRequest, FacialEmotionRecognitionResponse]
+class FacialEmotionExecutor(Config):
+    name: Literal["FacialEmotion"] = "FacialEmotion"
+    value: Union[FacialEmotionRequest, FacialEmotionResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "Facial Emotion Recognition"
+        title = "Facial Emotion"
         json_schema_extra = {
             "target": {
                 "value": 0
@@ -175,21 +174,24 @@ class FacialEmotionRecognitionExecutor(Config):
 
 
 
-class FacialEmotionRecognitionDeepFaceInputs(Inputs):
-    inputImage: InputImage
 
 
-class FacialEmotionRecognitionDeepFaceConfigs(Configs):
+
+class DeepFaceConfigs(Configs):
     configReturnAllScores: ConfigReturnAllScores
 
 
-class FacialEmotionRecognitionDeepFaceOutputs(Outputs):
+class DeepFaceInputs(Inputs):
+    inputImage: InputImage
+
+
+class DeepFaceOutputs(Outputs):
     outputDetections: OutputDetections
 
 
-class FacialEmotionRecognitionDeepFaceRequest(Request):
-    inputs: Optional[FacialEmotionRecognitionDeepFaceInputs]
-    configs: FacialEmotionRecognitionDeepFaceConfigs
+class DeepFaceRequest(Request):
+    inputs: Optional[DeepFaceInputs]
+    configs: DeepFaceConfigs
 
     class Config:
         json_schema_extra = {
@@ -197,13 +199,13 @@ class FacialEmotionRecognitionDeepFaceRequest(Request):
         }
 
 
-class FacialEmotionRecognitionDeepFaceResponse(Response):
-    outputs: FacialEmotionRecognitionDeepFaceOutputs
+class DeepFaceResponse(Response):
+    outputs: DeepFaceOutputs
 
 
-class FacialEmotionRecognitionDeepFaceExecutor(Config):
-    name: Literal["FacialEmotionRecognitionDeepFace"] = "FacialEmotionRecognitionDeepFace"
-    value: Union[FacialEmotionRecognitionDeepFaceRequest, FacialEmotionRecognitionDeepFaceResponse]
+class DeepFaceExecutor(Config):
+    name: Literal["DeepFace"] = "DeepFace"
+    value: Union[DeepFaceRequest, DeepFaceResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
@@ -218,7 +220,7 @@ class FacialEmotionRecognitionDeepFaceExecutor(Config):
 
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-    value: Union[FacialEmotionRecognitionExecutor, FacialEmotionRecognitionDeepFaceExecutor]
+    value: Union[FacialEmotionExecutor, DeepFaceExecutor]
     type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
