@@ -13,7 +13,7 @@ from capsules.FacialEmotionRecognition.src.utils.response import build_response
 from capsules.FacialEmotionRecognition.src.models.PackageModel import PackageModel, Detection
 
 
-class FacialEmotionRecognition(Capsule):
+class FacialEmotion(Capsule):
     def __init__(self, request, bootstrap):
         super().__init__(request, bootstrap)
         self.request.model = PackageModel(**(self.request.data))
