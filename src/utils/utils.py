@@ -7,7 +7,7 @@ from sdks.novavision.src.base.application import Application
 from capsules.FacialEmotionRecognition.src.models import PackageModel
 
 weight_path = '/storage/model.h5'
-weight_url = 'https://drive.google.com/file/d/1VsB0p2uomNRmFuyAC6eqQOR24b1c3aoY/view?usp=drive_link'
+weight_url = 'https://drive.google.com/file/d/1-EG8oq2x3zEODzAnF9Kut3eZq2WjVasa/view?usp=drive_link'
 
 
 def select_device(device='', batch_size=0, newline=True):
