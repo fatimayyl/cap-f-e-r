@@ -21,8 +21,7 @@ class FacialEmotionRecognitionDeepFace(Capsule):
         super().__init__(request, bootstrap)
         self.request.model = PackageModel(**(self.request.data))
         self.image = self.request.get_param("inputImage")
-        
-        # Config'den returnAllScores değerini al
+
         try:
             config_return_all_scores = self.request.get_param("returnAllScores")
             if config_return_all_scores:
@@ -51,25 +50,22 @@ class FacialEmotionRecognitionDeepFace(Capsule):
 
     def deepface_inference(self):
         detection_list = []
-        
-        # Denenmesi gereken detector'lar sırasıyla
+
         detectors = ["opencv", "mtcnn", "retinaface", "ssd"]
         
         try:
-            # DeepFace'e numpy array olarak geçiriyoruz
             self.image.value = np.asarray(self.image.value).astype(np.uint8)
             
             result = None
             successful_detector = None
-            
-            # Farklı detector'ları sırasıyla dene
+
             for detector in detectors:
                 try:
                     print(f"Trying detector: {detector}")
                     result = analyze(
                         img_path=self.image.value,
                         actions=["emotion"],
-                        enforce_detection=False,  # Yüz algılanamasa bile devam et
+                        enforce_detection=False,
                         detector_backend=detector,
                         silent=True
                     )
@@ -79,61 +75,51 @@ class FacialEmotionRecognitionDeepFace(Capsule):
                 except Exception as detector_error:
                     print(f"Detector {detector} failed: {str(detector_error)}")
                     continue
-            
-            # Hiçbir detector başarılı olamadıysa
+
             if result is None:
                 print("No detector could analyze the image")
                 return []
-            
-            # Eğer birden fazla yüz bulunduysa, hepsini işle
+
             if isinstance(result, list):
                 faces = result
             else:
                 faces = [result]
             
             for face_result in faces:
-                # Yüz bounding box bilgisini al
                 region = face_result.get("region", {})
                 
-                if not region:  # Region bilgisi yoksa, tüm resmi kullan
+                if not region:
                     height, width = self.image.value.shape[:2]
                     region = {"x": 0, "y": 0, "w": width, "h": height}
-                
-                # Bounding box koordinatlarını çıkar
+
                 x = region.get("x", 0)
                 y = region.get("y", 0)
                 w = region.get("w", 0)
                 h = region.get("h", 0)
-                
-                # Bounding box dict'ini oluştur
+
                 bbox = {
                     "left": x,
                     "top": y,
                     "width": w,
                     "height": h
                 }
-                
-                # Duygu analizi sonuçlarını al
+
                 emotion = face_result["dominant_emotion"]
                 emotion_scores = face_result["emotion"]
                 confidence = emotion_scores[emotion]
-                
-                # Debug: Tüm emotion skorlarını yazdır
+
                 print(f"All emotion scores: {emotion_scores}")
                 print(f"Dominant emotion: {emotion}")
                 print(f"Confidence: {confidence}")
-                
-                # Skorların toplamını kontrol et
+
                 total_score = sum(emotion_scores.values())
                 print(f"Total score sum: {total_score}")
-                
-                # Eğer tüm skorlar %100 ise, normalizasyon sorunu olabilir
+
                 if confidence >= 0.99:
                     print("WARNING: Very high confidence detected, possible model issue!")
                 
                 class_id = list(emotion_scores.keys()).index(emotion)
-                
-                # Detection objesi oluştur
+
                 detection = Detection(
                     boundingBox=bbox,
                     confidence=confidence,
@@ -141,8 +127,7 @@ class FacialEmotionRecognitionDeepFace(Capsule):
                     classId=class_id,
                     imgUID=self.image.uID
                 )
-                
-                # Tüm skorları döndür seçeneği
+
                 if self.return_all_scores:
                     detection.extra = {
                         "emotion_scores": face_result["emotion"],
@@ -153,21 +138,17 @@ class FacialEmotionRecognitionDeepFace(Capsule):
                 
         except Exception as e:
             print(f"General DeepFace error: {str(e)}")
-            # Hata durumunda boş liste döndür
             return []
 
         return detection_list
 
     def run(self):
         self.image = Image.get_frame(img=self.image, redis_db=self.redis_db)
-        
-        # DeepFace kendi yüz algılamasını yapacak, detections'a ihtiyaç yok
+
         self.image.detections = []
-        
-        # DeepFace ile hem yüz algılama hem duygu analizi yap
+
         self.detections = self.deepface_inference()
-        
-        # Response'u oluştur ve döndür
+
         packageModel = build_response_deepface(context=self)
         return packageModel
 
